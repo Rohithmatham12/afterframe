@@ -1,5 +1,8 @@
 name: Deploy GitHub Pages
 on:
+  push:
+    branches: [codex/afterframe]
+    paths: ["frontend/**", ".github/workflows/pages.yml"]
   workflow_dispatch:
 permissions:
   contents: read
