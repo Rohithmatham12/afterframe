@@ -9,3 +9,6 @@ Bearer authorization avoids cookie-based CSRF. CORS is an explicit origin allowl
 Evidence: Go race/integration logs, real browser memory isolation, spoiler non-disclosure, private-profile checks, invalid image rejection and local account-erasure journey. Provider failure tests use isolated HTTP test servers; application browser endpoints are not mocked.
 
 Outstanding: hosted OAuth/redirect configuration, production TLS/proxy policy, privileged-role bootstrap on Supabase, real email delivery, restoration/backups, moderation operations and abuse/load testing. No public deployment is approved. This is not a claim of production security certification.
+
+## Final local verification
+Private-list likes now resolve list visibility before mutation and return 404 for inaccessible records. Browser tests verify unauthorized review/list writes, literal script-text rendering, malformed bearer rejection, cross-user watchlist isolation and cross-tab sign-out. Hosted disposable-account erasure proves identity removal and stale-token rejection; Testcontainers proves durable erasure retry after provider failure. Real Google callback and protected Go profile persistence pass. These checks do not certify production proxy/RLS deployment configuration.

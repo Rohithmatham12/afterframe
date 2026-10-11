@@ -1,0 +1,58 @@
+=== RUN   TestPostgresJourneys
+2026/10/11 00:42:33 github.com/testcontainers/testcontainers-go - Connected to docker: 
+  Server Version: 28.1.1
+  API Version: 1.49
+  Operating System: Docker Desktop
+  Total Memory: 3919 MB
+  Labels:
+    com.docker.desktop.address=unix:///Users/rohithmatam/Library/Containers/com.docker.docker/Data/docker-cli.sock
+  Testcontainers for Go Version: v0.44.0
+  Resolved Docker Host: unix:///var/run/docker.sock
+  Resolved Docker Socket Path: /var/run/docker.sock
+  Test SessionID: e9310567b510b887b7cf74bbd304b6c90fcdeaa6f7aacb402f1748f3c91c9015
+  Test ProcessID: 926c5187-dfb7-42c7-80db-528a4c41a092
+2026/10/11 00:42:33 🐳 Creating container for image pgvector/pgvector:pg17
+2026/10/11 00:42:33 🐳 Creating container for image testcontainers/ryuk:0.14.0
+2026/10/11 00:42:33 ✅ Container created: 9ed7e0aaa286
+2026/10/11 00:42:33 🐳 Starting container: 9ed7e0aaa286
+2026/10/11 00:42:33 ✅ Container started: 9ed7e0aaa286
+2026/10/11 00:42:33 ⏳ Waiting for container id 9ed7e0aaa286 image: testcontainers/ryuk:0.14.0. Waiting for: all of: [log message "Started", port 8080/tcp to be listening]
+2026/10/11 00:42:34 Shell not found in container
+2026/10/11 00:42:34 🔔 Container is ready: 9ed7e0aaa286
+2026/10/11 00:42:34 ✅ Container created: 9a4c913ab11c
+2026/10/11 00:42:34 🐳 Starting container: 9a4c913ab11c
+2026/10/11 00:42:34 ✅ Container started: 9a4c913ab11c
+2026/10/11 00:42:34 ⏳ Waiting for container id 9a4c913ab11c image: pgvector/pgvector:pg17. Waiting for: all of: [log message "database system is ready to accept connections" (occurrence: 2), port 5432/tcp to be listening]
+2026/10/11 00:42:37 🔔 Container is ready: 9a4c913ab11c
+=== RUN   TestPostgresJourneys/atomic_idempotent_film_logging
+=== RUN   TestPostgresJourneys/Memory_Vault_ownership_keyword_fuzzy_update_delete
+=== RUN   TestPostgresJourneys/Taste_Timeline_reflection_never_creates_rewatch
+=== RUN   TestPostgresJourneys/Spoiler_Safe_progressive_disclosure_and_comments
+=== RUN   TestPostgresJourneys/list_transaction_rollback_and_ownership
+=== RUN   TestPostgresJourneys/erasure_retries_remain_durable_during_provider_failure
+=== RUN   TestPostgresJourneys/large_histories_remain_bounded_and_owner_scoped
+    integration_test.go:259: 2000 private memories: 33.682958ms, 50-result bound
+=== RUN   TestPostgresJourneys/database_failure_rolls_back_prior_list_edits
+2026/10/11 00:42:38 🐳 Stopping container: 9a4c913ab11c
+2026/10/11 00:42:38 ✅ Container stopped: 9a4c913ab11c
+2026/10/11 00:42:38 🐳 Terminating container: 9a4c913ab11c
+2026/10/11 00:42:38 🚫 Container terminated: 9a4c913ab11c
+--- PASS: TestPostgresJourneys (5.34s)
+    --- PASS: TestPostgresJourneys/atomic_idempotent_film_logging (0.05s)
+    --- PASS: TestPostgresJourneys/Memory_Vault_ownership_keyword_fuzzy_update_delete (0.02s)
+    --- PASS: TestPostgresJourneys/Taste_Timeline_reflection_never_creates_rewatch (0.01s)
+    --- PASS: TestPostgresJourneys/Spoiler_Safe_progressive_disclosure_and_comments (0.02s)
+    --- PASS: TestPostgresJourneys/list_transaction_rollback_and_ownership (0.01s)
+    --- PASS: TestPostgresJourneys/erasure_retries_remain_durable_during_provider_failure (0.01s)
+    --- PASS: TestPostgresJourneys/large_histories_remain_bounded_and_owner_scoped (0.14s)
+    --- PASS: TestPostgresJourneys/database_failure_rolls_back_prior_list_edits (0.01s)
+=== RUN   TestSpoilerDisclosure
+--- PASS: TestSpoilerDisclosure (0.00s)
+=== RUN   TestRatingValidation
+--- PASS: TestRatingValidation (0.00s)
+=== RUN   TestMalformedInput
+--- PASS: TestMalformedInput (0.00s)
+=== RUN   TestDiaryDate
+--- PASS: TestDiaryDate (0.00s)
+PASS
+ok  	afterframe/internal/service	6.930s

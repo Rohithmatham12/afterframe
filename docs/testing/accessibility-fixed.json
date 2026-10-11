@@ -1,0 +1,195 @@
+{
+  "config": {
+    "argv": [
+      "/Users/rohithmatam/.nvm/versions/node/v24.11.1/bin/node",
+      "/Users/rohithmatam/Documents/all/afterframe/frontend/node_modules/.bin/playwright",
+      "test",
+      "--grep",
+      "accessibility:"
+    ],
+    "configFile": "/Users/rohithmatam/Documents/all/afterframe/frontend/playwright.config.ts",
+    "rootDir": "/Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/rohithmatam/Documents/all/afterframe/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "/Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 120000
+      }
+    ],
+    "filteredProjects": [
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "/Users/rohithmatam/Documents/all/afterframe/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "",
+        "testDir": "/Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e",
+        "snapshotDir": "/Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e",
+        "testIgnore": [],
+        "testMatch": "**/*.@(spec|test).?(c|m)[jt]s?(x)",
+        "timeout": 120000,
+        "use": {
+          "baseURL": "http://127.0.0.1:3000",
+          "browserName": "chromium",
+          "channel": "chrome",
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "trace": "off",
+          "screenshot": "only-on-failure"
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": ""
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "../docs/testing/accessibility-fixed.json"
+        }
+      ],
+      [
+        "html",
+        {
+          "outputFolder": "../.local/playwright-report",
+          "open": "never"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "default",
+    "updateSourceMethod": "patch",
+    "version": "1.64.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "journeys.spec.ts",
+      "file": "journeys.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "accessibility: keyboard dialog, reduced motion, text spacing and narrow reflow",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 1254,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n    at /Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e/journeys.spec.ts:505:84",
+                    "location": {
+                      "file": "/Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e/journeys.spec.ts",
+                      "column": 84,
+                      "line": 505
+                    },
+                    "snippet": "  503 |  await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page.getByRole('button',{name:'Sign in',exact:true})).toBeFocused();\n  504 |  await page.setViewportSize({width:320,height:900});await page.addStyleTag({content:'* {letter-spacing:.12em !important;word-spacing:.16em !important;line-height:1.5 !important} p {margin-bottom:2em !important}'});\n> 505 |  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);\n      |                                                                                    ^\n  506 |  const results=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze();expect(results.violations).toEqual([]);\n  507 |  await page.screenshot({path:'../docs/testing/accessibility-320-text-spacing.png'});\n  508 | });"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e/journeys.spec.ts",
+                        "column": 84,
+                        "line": 505
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n\n  503 |  await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page.getByRole('button',{name:'Sign in',exact:true})).toBeFocused();\n  504 |  await page.setViewportSize({width:320,height:900});await page.addStyleTag({content:'* {letter-spacing:.12em !important;word-spacing:.16em !important;line-height:1.5 !important} p {margin-bottom:2em !important}'});\n> 505 |  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);\n      |                                                                                    ^\n  506 |  const results=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze();expect(results.violations).toEqual([]);\n  507 |  await page.screenshot({path:'../docs/testing/accessibility-320-text-spacing.png'});\n  508 | });\n    at /Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e/journeys.spec.ts:505:84"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-11T07:53:12.113Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/Users/rohithmatam/Documents/all/afterframe/frontend/test-results/journeys-accessibility-key-8d0f0-t-spacing-and-narrow-reflow/test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/Users/rohithmatam/Documents/all/afterframe/frontend/test-results/journeys-accessibility-key-8d0f0-t-spacing-and-narrow-reflow/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e/journeys.spec.ts",
+                    "column": 84,
+                    "line": 505
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "aa09586c1d16412a1f00-70d640a4acb971b6c717",
+          "file": "journeys.spec.ts",
+          "line": 498,
+          "column": 5
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-11T07:53:11.805Z",
+    "duration": 3412.6530000000002,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}

@@ -4,6 +4,7 @@ export const metadata: Metadata = {
   title: 'Afterframe — Your life, in films',
   description: 'Your movies. Your memories. Your evolving perspective.',
   manifest: './manifest.webmanifest',
+  icons: { icon: './icon-192.png', apple: './icon-192.png' },
 };
 export const viewport: Viewport = {
   themeColor: '#101411',
@@ -15,6 +16,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://image.tmdb.org" />
+      </head>
       <body>{children}</body>
     </html>
   );

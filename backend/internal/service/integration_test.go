@@ -7,6 +7,7 @@ import (
 	"afterframe/internal/db"
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go"
@@ -16,6 +17,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestPostgresJourneys(t *testing.T) {
@@ -199,4 +201,149 @@ func TestPostgresJourneys(t *testing.T) {
 			t.Fatal("duplicate films allowed")
 		}
 	})
+	t.Run("erasure retries remain durable during provider failure", func(t *testing.T) {
+		user := uuid.NewString()
+		if err := s.Ensure(ctx, user); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := s.Write(ctx, user, "diary", Input{FilmID: 550, WatchedOn: "2024-10-10", RequestID: uuid.NewString(), Scene: "erase this private memory"}); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.EraseAccount(ctx, user); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.Ensure(ctx, user); !errors.Is(err, ErrForbidden) {
+			t.Fatal("tombstone did not deny recreation", err)
+		}
+		calls := 0
+		s.RetryErasures(ctx, func(context.Context, string) error { calls++; return errors.New("provider unavailable") })
+		var done bool
+		if err := pool.QueryRow(ctx, "SELECT auth_deleted FROM deleted_accounts WHERE user_id=$1", user).Scan(&done); err != nil || done {
+			t.Fatal("failure lost retry", err)
+		}
+		s.RetryErasures(ctx, func(context.Context, string) error { calls++; return nil })
+		pool.QueryRow(ctx, "SELECT auth_deleted FROM deleted_accounts WHERE user_id=$1", user).Scan(&done)
+		if calls != 2 || !done {
+			t.Fatal("retry did not complete", calls, done)
+		}
+		var remaining int
+		pool.QueryRow(ctx, "SELECT count(*) FROM memories WHERE user_id=$1", user).Scan(&remaining)
+		if remaining != 0 {
+			t.Fatal("private data survived")
+		}
+	})
+	t.Run("large histories remain bounded and owner scoped", func(t *testing.T) {
+		user := uuid.NewString()
+		if err := s.Ensure(ctx, user); err != nil {
+			t.Fatal(err)
+		}
+		_, err := pool.Exec(ctx, `INSERT INTO viewings(user_id,film_id,watched_on,request_id,notes,private) SELECT $1,550,'2024-10-10',gen_random_uuid(),'bulk fixture '||n,true FROM generate_series(1,2000) n`, user)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = pool.Exec(ctx, `INSERT INTO memories(user_id,viewing_id,scene,emotion,context) SELECT user_id,id,'lighthouse memory','calm','winter' FROM viewings WHERE user_id=$1`, user)
+		if err != nil {
+			t.Fatal(err)
+		}
+		start := time.Now()
+		data, err := s.Read(ctx, user, "memories", Filter{Query: "lighthouse"})
+		elapsed := time.Since(start)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var rows []any
+		json.Unmarshal(data, &rows)
+		if len(rows) != 50 {
+			t.Fatal("unbounded or missing results", len(rows))
+		}
+		t.Logf("2000 private memories: %s, 50-result bound", elapsed)
+		profile, err := s.Read(ctx, user, "profile", Filter{TargetID: user})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(object(profile)["diary"].([]any)) != 50 {
+			t.Fatal("profile history not bounded")
+		}
+
+		_, err = pool.Exec(ctx, `INSERT INTO opinions(user_id,film_id,rating,reflection,kind) SELECT $1,550,4,'history fixture','reflection' FROM generate_series(1,2000)`, user)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = pool.Exec(ctx, `INSERT INTO reviews(user_id,film_id,safe,watched,reflection) SELECT $1,550,'safe fixture','plot fixture','reflection fixture' FROM generate_series(1,500)`, user)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if out := os.Getenv("AFTERFRAME_AUDIT_OUTPUT"); out != "" {
+			queries, err := os.ReadFile("../../queries/app.sql")
+			if err != nil {
+				t.Fatal(err)
+			}
+			plans := map[string]json.RawMessage{}
+			for name, args := range map[string][]any{"SearchMemories": {"lighthouse", "", "", ""}, "Diary": {"", 0}, "Timeline": {int64(550)}, "ReadReviews": {int64(550), false, 0}, "Lists": {false, "", 0}} {
+				marker := "-- name: " + name + " :one\n"
+				parts := strings.Split(string(queries), marker)
+				if len(parts) != 2 {
+					t.Fatal(name)
+				}
+				query := strings.Split(parts[1], "-- name:")[0]
+				tx, err := pool.Begin(ctx)
+				if err != nil {
+					t.Fatal(err)
+				}
+				q := db.New(tx)
+				if err = q.SetViewer(ctx, user); err != nil {
+					t.Fatal(err)
+				}
+				if err = q.SetRole(ctx); err != nil {
+					t.Fatal(err)
+				}
+				var plan []byte
+				if err = tx.QueryRow(ctx, "EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) "+query, args...).Scan(&plan); err != nil {
+					tx.Rollback(ctx)
+					t.Fatal(name, err)
+				}
+				tx.Rollback(ctx)
+				plans[name] = plan
+			}
+			encoded, err := json.MarshalIndent(plans, "", "  ")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = os.WriteFile(out, encoded, 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		data, err = s.Read(ctx, b, "memories", Filter{Query: "lighthouse"})
+		if err != nil || string(data) != "[]" {
+			t.Fatal("bulk privacy isolation failed")
+		}
+		data, err = s.Read(ctx, user, "diary", Filter{Offset: 1950})
+		json.Unmarshal(data, &rows)
+		if err != nil || len(rows) != 50 {
+			t.Fatal("large diary pagination", err, len(rows))
+		}
+	})
+	t.Run("database failure rolls back prior list edits", func(t *testing.T) {
+		data, err := s.Write(ctx, a, "lists", Input{Title: "rollback", FilmIDs: []int64{550}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		id := ID(object(data)["id"].(string))
+		_, err = s.Transaction(ctx, a, func(q *db.Queries) (any, error) {
+			if err := q.DeleteListItems(ctx, id); err != nil {
+				return nil, err
+			}
+			return nil, q.AddListItem(ctx, db.AddListItemParams{ListID: id, FilmID: 999999999, Position: 0})
+		})
+		if err == nil {
+			t.Fatal("expected foreign-key error")
+		}
+		var count int
+		pool.QueryRow(ctx, "SELECT count(*) FROM list_items WHERE list_id=$1", id).Scan(&count)
+		if count != 1 {
+			t.Fatal("transaction did not restore items")
+		}
+	})
+
 }

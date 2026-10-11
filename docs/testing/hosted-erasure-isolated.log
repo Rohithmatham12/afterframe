@@ -1,0 +1,3 @@
+PASS: disposable hosted Auth account created (no email sent)
+PASS: hosted access token validated by Go; private test data saved only locally
+PASS: Go erased local personal data and hosted Auth account; login and stale-token access rejected

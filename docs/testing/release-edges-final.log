@@ -1,0 +1,10 @@
+
+Running 3 tests using 1 worker
+
+(node:71946) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/e2e/journeys.spec.ts:448:5 › release edges: reviews, explicit unwatched reveal, ownership and deletion (4.8s)
+  ✓  2 tests/e2e/journeys.spec.ts:470:5 › release edges: private lists, sharing, likes, unfollow and read notifications (2.8s)
+  ✓  3 tests/e2e/journeys.spec.ts:486:5 › release edges: diary pagination, filters, network retry, double click and session tabs (2.1s)
+
+  3 passed (11.1s)

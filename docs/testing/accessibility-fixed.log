@@ -1,0 +1,32 @@
+
+Running 1 test using 1 worker
+
+(node:73970) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/e2e/journeys.spec.ts:498:5 › accessibility: keyboard dialog, reduced motion, text spacing and narrow reflow (1.3s)
+
+
+  1) tests/e2e/journeys.spec.ts:498:5 › accessibility: keyboard dialog, reduced motion, text spacing and narrow reflow 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      503 |  await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page.getByRole('button',{name:'Sign in',exact:true})).toBeFocused();
+      504 |  await page.setViewportSize({width:320,height:900});await page.addStyleTag({content:'* {letter-spacing:.12em !important;word-spacing:.16em !important;line-height:1.5 !important} p {margin-bottom:2em !important}'});
+    > 505 |  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+          |                                                                                    ^
+      506 |  const results=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze();expect(results.violations).toEqual([]);
+      507 |  await page.screenshot({path:'../docs/testing/accessibility-320-text-spacing.png'});
+      508 | });
+        at /Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e/journeys.spec.ts:505:84
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/journeys-accessibility-key-8d0f0-t-spacing-and-narrow-reflow/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/journeys-accessibility-key-8d0f0-t-spacing-and-narrow-reflow/error-context.md
+
+  1 failed
+    tests/e2e/journeys.spec.ts:498:5 › accessibility: keyboard dialog, reduced motion, text spacing and narrow reflow 

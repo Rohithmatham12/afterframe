@@ -20,7 +20,11 @@ export function Poster({
     >
       {film.poster ? (
         <img
-          src={'https://image.tmdb.org/t/p/w342' + film.poster}
+          src={'https://image.tmdb.org/t/p/w185' + film.poster}
+          srcSet={`https://image.tmdb.org/t/p/w185${film.poster} 185w, https://image.tmdb.org/t/p/w342${film.poster} 342w`}
+          sizes={small ? '64px' : '(max-width: 600px) 30vw, 180px'}
+          width={342}
+          height={513}
           alt={film.title + ' poster'}
           loading="lazy"
         />
@@ -64,11 +68,37 @@ export function Modal({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
-    ref.current?.showModal();
-    return () => ref.current?.close();
+    const dialog = ref.current;
+    const previous = document.activeElement as HTMLElement | null;
+    dialog?.showModal();
+    return () => {
+      dialog?.close();
+      previous?.focus();
+    };
   }, []);
   return (
-    <dialog ref={ref} onCancel={close} aria-labelledby="dialog-title">
+    <dialog
+      ref={ref}
+      onCancel={close}
+      aria-labelledby="dialog-title"
+      onKeyDown={(event) => {
+        if (event.key !== 'Tab') return;
+        const controls = Array.from(
+          event.currentTarget.querySelectorAll<HTMLElement>(
+            'button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), a[href], [tabindex="0"]'
+          )
+        ).filter((el) => el.getClientRects().length > 0);
+        const first = controls[0],
+          last = controls[controls.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }}
+    >
       <header>
         <h2 id="dialog-title">{title}</h2>
         <button

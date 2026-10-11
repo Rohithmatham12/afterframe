@@ -1,0 +1,119 @@
+{
+  "revision": "13e76d7f687fb31f6a7498a015bfc24532270961",
+  "snapshot": "working tree",
+  "scope": "Source trace audit; not a remote-backed Archify provenance receipt",
+  "claims": [
+    {
+      "claim": "Static frontend delegates to generated API client",
+      "path": "frontend/lib/api.ts",
+      "start_line": 4,
+      "end_line": 15,
+      "sha256": "f8fb4950d4abc3722a44685e621a9f38a4e45830a5ad722e6cd85af737bd1b83"
+    },
+    {
+      "claim": "Go routes own authentication and authorization",
+      "path": "backend/internal/httpapi/api.go",
+      "start_line": 67,
+      "end_line": 84,
+      "sha256": "e3b3481371047e00456b1ad6f234705bdcf396ad29b954a7f193720583df2d32"
+    },
+    {
+      "claim": "Auth validates bearer tokens with authoritative provider",
+      "path": "backend/internal/auth/auth.go",
+      "start_line": 25,
+      "end_line": 53,
+      "sha256": "a3e474a5154664211c65bd5cdc89ab8fc1453b0cad7b0cc14d56c29807fee349"
+    },
+    {
+      "claim": "Every service transaction sets viewer and database role",
+      "path": "backend/internal/service/service.go",
+      "start_line": 79,
+      "end_line": 105,
+      "sha256": "a1bfa6386562cf36a77c7d2ad5b732bc7c58fc4a24e895ed7d71d9ee7f0f57c5"
+    },
+    {
+      "claim": "Atomic film logging appends opinions and memories",
+      "path": "backend/internal/service/service.go",
+      "start_line": 392,
+      "end_line": 459,
+      "sha256": "a1bfa6386562cf36a77c7d2ad5b732bc7c58fc4a24e895ed7d71d9ee7f0f57c5"
+    },
+    {
+      "claim": "TMDB requests carry server credentials only",
+      "path": "backend/internal/catalog/catalog.go",
+      "start_line": 79,
+      "end_line": 103,
+      "sha256": "0d6aef01499191ad399147abfa5b776a2d090d79ebb295a4ae2ff708b83bac8f"
+    },
+    {
+      "claim": "Memory search is owner-scoped PostgreSQL FTS and fuzzy matching",
+      "path": "backend/queries/app.sql",
+      "start_line": 46,
+      "end_line": 54,
+      "sha256": "8e67f1afb74d9da26a7c83f6ecc18287e6054d676978248737472f6e587e17f1"
+    },
+    {
+      "claim": "Timeline comparison belongs to Go",
+      "path": "backend/internal/taste/insights.go",
+      "start_line": 28,
+      "end_line": 54,
+      "sha256": "cb02f6afcba6e675c4f9fb870f4fdac788599c006eac50ee6f94b9873b1aabf6"
+    },
+    {
+      "claim": "Forbidden spoiler fields are removed before serialization",
+      "path": "backend/internal/spoilers/policy.go",
+      "start_line": 4,
+      "end_line": 12,
+      "sha256": "1fbd6dbefd291ad0d3fb465123a70e66c429755687d967be565aa87144d3fdc5"
+    },
+    {
+      "claim": "Review and feed reads invoke the same disclosure policy",
+      "path": "backend/internal/service/service.go",
+      "start_line": 187,
+      "end_line": 206,
+      "sha256": "a1bfa6386562cf36a77c7d2ad5b732bc7c58fc4a24e895ed7d71d9ee7f0f57c5"
+    },
+    {
+      "claim": "Social writes execute within the owner transaction",
+      "path": "backend/internal/service/service.go",
+      "start_line": 311,
+      "end_line": 355,
+      "sha256": "a1bfa6386562cf36a77c7d2ad5b732bc7c58fc4a24e895ed7d71d9ee7f0f57c5"
+    },
+    {
+      "claim": "Account erasure commits private deletion and durable tombstone",
+      "path": "backend/internal/service/account.go",
+      "start_line": 14,
+      "end_line": 27,
+      "sha256": "3447ced56967e1700cfdfecad3855081f0929a357b2f6203f20e20fddfc7bf37"
+    },
+    {
+      "claim": "Auth erasure retries are bounded and durable",
+      "path": "backend/internal/service/account.go",
+      "start_line": 41,
+      "end_line": 55,
+      "sha256": "3447ced56967e1700cfdfecad3855081f0929a357b2f6203f20e20fddfc7bf37"
+    },
+    {
+      "claim": "Database uses RLS and role-scoped permissions",
+      "path": "backend/migrations/000002_security.up.sql",
+      "start_line": 1,
+      "end_line": 16,
+      "sha256": "2fa2543317eb6e4bf6267ac233f52f44b439a457035652ec7d5f8b186ffd6c46"
+    },
+    {
+      "claim": "Deployment configuration targets Render Free without auto deploy",
+      "path": "render.yaml",
+      "start_line": 6,
+      "end_line": 12,
+      "sha256": "a721418111191f2ad452be814829e7c40ec0133e010f740f0110e5758296068d"
+    },
+    {
+      "claim": "GitHub workflow builds a static Pages artifact without deploying",
+      "path": ".github/workflows/pages.yml",
+      "start_line": 1,
+      "end_line": 28,
+      "sha256": "4417e1c8162fe686020e1a8637aee119703acc35429981e6e82a370289d1a73f"
+    }
+  ]
+}

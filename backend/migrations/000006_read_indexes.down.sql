@@ -1,0 +1,1 @@
+DROP INDEX reviews_film_date,reviews_author_date,notifications_recipient_date,memories_owner,viewings_owner_film,follows_target,comments_review_layer_date;

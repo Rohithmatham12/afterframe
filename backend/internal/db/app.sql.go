@@ -182,7 +182,7 @@ func (q *Queries) DeleteViewing(ctx context.Context, id pgtype.UUID) ([]byte, er
 }
 
 const diary = `-- name: Diary :one
-SELECT coalesce(jsonb_agg(item ORDER BY watched_on DESC,created_at DESC),'[]'::jsonb) FROM (SELECT to_jsonb(v.*)||jsonb_build_object('film',to_jsonb(f.*)) item,v.watched_on,v.created_at FROM viewings v JOIN films f ON f.id=v.film_id WHERE v.user_id=viewer_id() AND ($1::text='' OR to_char(v.watched_on,'YYYY-MM')=$1) ORDER BY v.watched_on DESC,v.created_at DESC LIMIT 50 OFFSET $2) x
+SELECT coalesce(jsonb_agg(item ORDER BY watched_on DESC,created_at DESC),'[]'::jsonb) FROM (SELECT to_jsonb(v.*)||jsonb_build_object('film',film_card(f)) item,v.watched_on,v.created_at FROM viewings v JOIN films f ON f.id=v.film_id WHERE v.user_id=viewer_id() AND ($1::text='' OR to_char(v.watched_on,'YYYY-MM')=$1) ORDER BY v.watched_on DESC,v.created_at DESC LIMIT 50 OFFSET $2) x
 `
 
 type DiaryParams struct {
@@ -288,12 +288,29 @@ func (q *Queries) LikeReview(ctx context.Context, id pgtype.UUID) ([]byte, error
 	return to_jsonb, err
 }
 
-const lists = `-- name: Lists :one
-SELECT coalesce(jsonb_agg(to_jsonb(l.*)||jsonb_build_object('username',p.username,'likes',(SELECT count(*) FROM list_likes WHERE list_id=l.id),'liked',EXISTS(SELECT 1 FROM list_likes WHERE list_id=l.id AND user_id=viewer_id()),'items',coalesce((SELECT jsonb_agg(to_jsonb(f.*) ORDER BY i.position) FROM list_items i JOIN films f ON f.id=i.film_id WHERE i.list_id=l.id),'[]'::jsonb)) ORDER BY l.created_at DESC),'[]'::jsonb) FROM lists l JOIN profiles p ON p.id=l.user_id WHERE (l.user_id=viewer_id() OR (NOT l.private AND profile_visible(l.user_id))) AND ($1::boolean=false OR l.user_id=viewer_id())
+const listAccess = `-- name: ListAccess :one
+SELECT id FROM lists WHERE id=$1
 `
 
-func (q *Queries) Lists(ctx context.Context, dollar_1 bool) (interface{}, error) {
-	row := q.db.QueryRow(ctx, lists, dollar_1)
+func (q *Queries) ListAccess(ctx context.Context, id pgtype.UUID) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, listAccess, id)
+	var id_2 pgtype.UUID
+	err := row.Scan(&id_2)
+	return id_2, err
+}
+
+const lists = `-- name: Lists :one
+SELECT coalesce(jsonb_agg(to_jsonb(l.*)||jsonb_build_object('username',p.username,'likes',(SELECT count(*) FROM list_likes WHERE list_id=l.id),'liked',EXISTS(SELECT 1 FROM list_likes WHERE list_id=l.id AND user_id=viewer_id()),'items',coalesce((SELECT jsonb_agg(film_card(f) ORDER BY i.position) FROM list_items i JOIN films f ON f.id=i.film_id WHERE i.list_id=l.id),'[]'::jsonb)) ORDER BY l.created_at DESC),'[]'::jsonb) FROM (SELECT id, user_id, title, description, private, ranked, created_at FROM lists WHERE ($1::boolean=false OR user_id=viewer_id()) AND ($2::text='' OR id::text=$2) ORDER BY created_at DESC LIMIT 30 OFFSET $3) l JOIN profiles p ON p.id=l.user_id WHERE (l.user_id=viewer_id() OR (NOT l.private AND profile_visible(l.user_id)))
+`
+
+type ListsParams struct {
+	Column1 bool   `json:"column_1"`
+	Column2 string `json:"column_2"`
+	Offset  int32  `json:"offset"`
+}
+
+func (q *Queries) Lists(ctx context.Context, arg ListsParams) (interface{}, error) {
+	row := q.db.QueryRow(ctx, lists, arg.Column1, arg.Column2, arg.Offset)
 	var coalesce interface{}
 	err := row.Scan(&coalesce)
 	return coalesce, err
@@ -386,7 +403,7 @@ func (q *Queries) PendingErasures(ctx context.Context) ([]pgtype.UUID, error) {
 }
 
 const profileDetails = `-- name: ProfileDetails :one
-SELECT to_jsonb(p.*)||jsonb_build_object('followers',(SELECT count(*) FROM follows WHERE target_id=p.id),'following',(SELECT count(*) FROM follows WHERE user_id=p.id),'viewings',(SELECT count(*) FROM viewings WHERE user_id=p.id),'diary',coalesce((SELECT jsonb_agg(to_jsonb(v.*)||jsonb_build_object('film',to_jsonb(f.*)) ORDER BY v.watched_on DESC) FROM viewings v JOIN films f ON f.id=v.film_id WHERE v.user_id=p.id AND (NOT v.private OR p.id=viewer_id())),'[]'::jsonb)) FROM profiles p WHERE p.id=$1 AND profile_visible(p.id)
+SELECT to_jsonb(p.*)||jsonb_build_object('followers',(SELECT count(*) FROM follows WHERE target_id=p.id),'following',(SELECT count(*) FROM follows WHERE user_id=p.id),'viewings',(SELECT count(*) FROM viewings WHERE user_id=p.id),'diary',coalesce((SELECT jsonb_agg(to_jsonb(v.*)||jsonb_build_object('film',film_card(f)) ORDER BY v.watched_on DESC) FROM (SELECT id, user_id, film_id, watched_on, rating, notes, rewatch, private, request_id, created_at FROM viewings WHERE user_id=p.id AND (NOT private OR p.id=viewer_id()) ORDER BY watched_on DESC,created_at DESC LIMIT 50) v JOIN films f ON f.id=v.film_id),'[]'::jsonb)) FROM profiles p WHERE p.id=$1 AND profile_visible(p.id)
 `
 
 func (q *Queries) ProfileDetails(ctx context.Context, id pgtype.UUID) (interface{}, error) {
@@ -418,7 +435,7 @@ func (q *Queries) ReadNotifications(ctx context.Context) error {
 
 const readReviews = `-- name: ReadReviews :one
 SELECT coalesce(jsonb_agg(item ORDER BY created_at DESC),'[]'::jsonb) FROM (
- SELECT to_jsonb(r.*)||jsonb_build_object('film',to_jsonb(f.*),'username',p.username,'likes',(SELECT count(*) FROM review_likes WHERE review_id=r.id),'liked',EXISTS(SELECT 1 FROM review_likes WHERE review_id=r.id AND user_id=viewer_id()),'allowed_layer',CASE WHEN r.user_id=viewer_id() THEN 3 ELSE greatest(coalesce((SELECT layer FROM reveals WHERE user_id=viewer_id() AND film_id=r.film_id),1),CASE WHEN EXISTS(SELECT 1 FROM viewings WHERE user_id=viewer_id() AND film_id=r.film_id) THEN 2 ELSE 1 END) END) item,r.created_at
+ SELECT to_jsonb(r.*)||jsonb_build_object('film',film_card(f),'username',p.username,'likes',(SELECT count(*) FROM review_likes WHERE review_id=r.id),'liked',EXISTS(SELECT 1 FROM review_likes WHERE review_id=r.id AND user_id=viewer_id()),'allowed_layer',CASE WHEN r.user_id=viewer_id() THEN 3 ELSE greatest(coalesce((SELECT layer FROM reveals WHERE user_id=viewer_id() AND film_id=r.film_id),1),CASE WHEN EXISTS(SELECT 1 FROM viewings WHERE user_id=viewer_id() AND film_id=r.film_id) THEN 2 ELSE 1 END) END) item,r.created_at
  FROM reviews r JOIN profiles p ON p.id=r.user_id JOIN films f ON f.id=r.film_id WHERE profile_visible(r.user_id) AND ($1::bigint=0 OR r.film_id=$1) AND ($2::boolean=false OR r.user_id=viewer_id() OR EXISTS(SELECT 1 FROM follows WHERE user_id=viewer_id() AND target_id=r.user_id)) ORDER BY r.created_at DESC LIMIT 30 OFFSET $3) x
 `
 
@@ -468,7 +485,7 @@ func (q *Queries) Report(ctx context.Context, arg ReportParams) error {
 }
 
 const resurface = `-- name: Resurface :one
-SELECT coalesce(jsonb_agg(item),'[]'::jsonb) FROM (SELECT (to_jsonb(m.*)-'search')||jsonb_build_object('film',to_jsonb(f.*),'watched_on',v.watched_on,'explanation','A memory from an earlier chapter') item FROM memories m JOIN viewings v ON v.id=m.viewing_id JOIN films f ON f.id=v.film_id JOIN profiles p ON p.id=m.user_id WHERE m.user_id=viewer_id() AND p.resurface AND v.watched_on<current_date-interval '30 days' ORDER BY abs(extract(doy FROM v.watched_on)-extract(doy FROM current_date)),v.watched_on DESC LIMIT 3) x
+SELECT coalesce(jsonb_agg(item),'[]'::jsonb) FROM (SELECT (to_jsonb(m.*)-'search')||jsonb_build_object('film',film_card(f),'watched_on',v.watched_on,'explanation','A memory from an earlier chapter') item FROM memories m JOIN viewings v ON v.id=m.viewing_id JOIN films f ON f.id=v.film_id JOIN profiles p ON p.id=m.user_id WHERE m.user_id=viewer_id() AND p.resurface AND v.watched_on<current_date-interval '30 days' ORDER BY abs(extract(doy FROM v.watched_on)-extract(doy FROM current_date)),v.watched_on DESC LIMIT 3) x
 `
 
 func (q *Queries) Resurface(ctx context.Context) (interface{}, error) {
@@ -560,7 +577,7 @@ func (q *Queries) SaveReview(ctx context.Context, dollar_1 []byte) ([]byte, erro
 
 const searchMemories = `-- name: SearchMemories :one
 SELECT coalesce(jsonb_agg(item ORDER BY score DESC,watched_on DESC),'[]'::jsonb) FROM (
- SELECT (to_jsonb(m.*)-'search')||jsonb_build_object('film',to_jsonb(f.*),'watched_on',v.watched_on,'explanation',CASE WHEN $1::text='' THEN 'Your private viewing memory' WHEN m.search @@ websearch_to_tsquery('english',$1) THEN 'Matches words in your memory' ELSE 'Similar wording in your memory' END) item,v.watched_on,
+ SELECT (to_jsonb(m.*)-'search')||jsonb_build_object('film',film_card(f),'watched_on',v.watched_on,'explanation',CASE WHEN $1::text='' THEN 'Your private viewing memory' WHEN m.search @@ websearch_to_tsquery('english',$1) THEN 'Matches words in your memory' ELSE 'Similar wording in your memory' END) item,v.watched_on,
  ts_rank(m.search,websearch_to_tsquery('english',$1))+word_similarity($1,m.scene||' '||m.emotion||' '||m.context) score
  FROM memories m JOIN viewings v ON v.id=m.viewing_id JOIN films f ON f.id=v.film_id
  WHERE m.user_id=viewer_id() AND ($1='' OR m.search @@ websearch_to_tsquery('english',$1) OR word_similarity($1,m.scene||' '||m.emotion||' '||m.context)>.18 OR (m.scene||' '||m.emotion||' '||m.context) ILIKE '%'||$1||'%')
@@ -621,7 +638,7 @@ func (q *Queries) SetWatchlist(ctx context.Context, arg SetWatchlistParams) ([]b
 }
 
 const timeline = `-- name: Timeline :one
-SELECT coalesce(jsonb_agg(item ORDER BY created_at DESC,id DESC),'[]'::jsonb) FROM (SELECT to_jsonb(o.*)||jsonb_build_object('film',to_jsonb(f.*)) item,o.created_at,o.id FROM opinions o JOIN films f ON f.id=o.film_id WHERE o.user_id=viewer_id() AND ($1::bigint=0 OR o.film_id=$1) ORDER BY o.created_at DESC,o.id DESC LIMIT 500) x
+SELECT coalesce(jsonb_agg(item ORDER BY created_at DESC,id DESC),'[]'::jsonb) FROM (SELECT to_jsonb(o.*)||jsonb_build_object('film',film_card(f)) item,o.created_at,o.id FROM opinions o JOIN films f ON f.id=o.film_id WHERE o.user_id=viewer_id() AND ($1::bigint=0 OR o.film_id=$1) ORDER BY o.created_at DESC,o.id DESC LIMIT 500) x
 `
 
 func (q *Queries) Timeline(ctx context.Context, dollar_1 int64) (interface{}, error) {
@@ -670,11 +687,11 @@ func (q *Queries) UpsertFilm(ctx context.Context, dollar_1 []byte) ([]byte, erro
 }
 
 const watchlist = `-- name: Watchlist :one
-SELECT coalesce(jsonb_agg(to_jsonb(w.*)||jsonb_build_object('film',to_jsonb(f.*)) ORDER BY w.created_at DESC),'[]'::jsonb) FROM watchlist w JOIN films f ON f.id=w.film_id WHERE w.user_id=viewer_id()
+SELECT coalesce(jsonb_agg(to_jsonb(w.*)||jsonb_build_object('film',film_card(f)) ORDER BY w.created_at DESC),'[]'::jsonb) FROM (SELECT user_id, film_id, private, created_at FROM watchlist WHERE user_id=viewer_id() ORDER BY created_at DESC LIMIT 50 OFFSET $1) w JOIN films f ON f.id=w.film_id
 `
 
-func (q *Queries) Watchlist(ctx context.Context) (interface{}, error) {
-	row := q.db.QueryRow(ctx, watchlist)
+func (q *Queries) Watchlist(ctx context.Context, offset int32) (interface{}, error) {
+	row := q.db.QueryRow(ctx, watchlist, offset)
 	var coalesce interface{}
 	err := row.Scan(&coalesce)
 	return coalesce, err

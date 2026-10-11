@@ -1,0 +1,24 @@
+
+> afterframe-web@0.1.0 format
+> prettier --write app components lib tests *.ts
+
+app/globals.css 76ms
+app/layout.tsx 28ms
+app/page.tsx 1ms
+components/account.tsx 11ms (unchanged)
+components/cinema.tsx 72ms
+components/forms.tsx 23ms (unchanged)
+components/library.tsx 22ms (unchanged)
+components/profile.tsx 5ms (unchanged)
+components/reviews.tsx 24ms (unchanged)
+components/ui.tsx 12ms
+lib/api.generated.ts 119ms
+lib/api.ts 6ms (unchanged)
+lib/auth.ts 3ms (unchanged)
+lib/catalog-snapshot.json 24ms
+tests/e2e/journeys.spec.ts 55ms
+tests/ui.test.tsx 2ms (unchanged)
+next-env.d.ts 1ms
+next.config.ts 1ms (unchanged)
+playwright.config.ts 1ms
+vitest.config.ts 1ms (unchanged)

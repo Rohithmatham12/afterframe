@@ -1,0 +1,268 @@
+{
+  "config": {
+    "argv": [
+      "/Users/rohithmatam/.nvm/versions/node/v24.11.1/bin/node",
+      "/Users/rohithmatam/Documents/all/afterframe/frontend/node_modules/.bin/playwright",
+      "test",
+      "--grep",
+      "release edges"
+    ],
+    "configFile": "/Users/rohithmatam/Documents/all/afterframe/frontend/playwright.config.ts",
+    "rootDir": "/Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/rohithmatam/Documents/all/afterframe/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "/Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 120000
+      }
+    ],
+    "filteredProjects": [
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "/Users/rohithmatam/Documents/all/afterframe/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "",
+        "testDir": "/Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e",
+        "snapshotDir": "/Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e",
+        "testIgnore": [],
+        "testMatch": "**/*.@(spec|test).?(c|m)[jt]s?(x)",
+        "timeout": 120000,
+        "use": {
+          "baseURL": "http://127.0.0.1:3000",
+          "browserName": "chromium",
+          "channel": "chrome",
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "trace": "off",
+          "screenshot": "only-on-failure"
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": ""
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "../docs/testing/release-edges.json"
+        }
+      ],
+      [
+        "html",
+        {
+          "outputFolder": "../.local/playwright-report",
+          "open": "never"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "default",
+    "updateSourceMethod": "patch",
+    "version": "1.64.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "journeys.spec.ts",
+      "file": "journeys.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "release edges: reviews, explicit unwatched reveal, ownership and deletion",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5787,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-11T07:38:17.295Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "aa09586c1d16412a1f00-10104d1d9820a2e87fd9",
+          "file": "journeys.spec.ts",
+          "line": 448,
+          "column": 5
+        },
+        {
+          "title": "release edges: private lists, sharing, likes, unfollow and read notifications",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 1930,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: not \u001b[32m200\u001b[39m",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: not \u001b[32m200\u001b[39m\n    at /Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e/journeys.spec.ts:476:87",
+                    "location": {
+                      "file": "/Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e/journeys.spec.ts",
+                      "column": 87,
+                      "line": 476
+                    },
+                    "snippet": "  474 |  await reader.goto('/#lists/'+list.body.id);await expect(reader.getByRole('heading',{name:'Private collection '+suffix})).toHaveCount(0);\n  475 |  expect((await mutate(reader,'lists',{id:list.body.id,title:'hijack',film_ids:[550]})).status).toBe(404);\n> 476 |  expect((await mutate(reader,'list-like',{id:list.body.id,enabled:true})).status).not.toBe(200);\n      |                                                                                       ^\n  477 |  expect((await mutate(page,'lists',{id:list.body.id,title:'Shared collection '+suffix,private:false,ranked:true,film_ids:[603,550]})).status).toBe(200);\n  478 |  await reader.reload();await expect(reader.getByRole('heading',{name:'Shared collection '+suffix})).toBeVisible();await reader.getByRole('button',{name:'Like · 0',exact:true}).click();await expect(reader.getByRole('button',{name:'Unlike · 1',exact:true})).toBeVisible();\n  479 |  await reader.goto('/#people');await reader.getByLabel('Search people').fill('collector_'+suffix);const person=reader.locator('.person').filter({hasText:'@collector_'+suffix});await person.getByRole('button',{name:'Follow',exact:true}).click();await expect(person.getByRole('button',{name:'Unfollow',exact:true})).toBeVisible();await person.getByRole('button',{name:'Unfollow',exact:true}).click();await expect(person.getByRole('button',{name:'Follow',exact:true})).toBeVisible();"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e/journeys.spec.ts",
+                        "column": 87,
+                        "line": 476
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: not \u001b[32m200\u001b[39m\n\n  474 |  await reader.goto('/#lists/'+list.body.id);await expect(reader.getByRole('heading',{name:'Private collection '+suffix})).toHaveCount(0);\n  475 |  expect((await mutate(reader,'lists',{id:list.body.id,title:'hijack',film_ids:[550]})).status).toBe(404);\n> 476 |  expect((await mutate(reader,'list-like',{id:list.body.id,enabled:true})).status).not.toBe(200);\n      |                                                                                       ^\n  477 |  expect((await mutate(page,'lists',{id:list.body.id,title:'Shared collection '+suffix,private:false,ranked:true,film_ids:[603,550]})).status).toBe(200);\n  478 |  await reader.reload();await expect(reader.getByRole('heading',{name:'Shared collection '+suffix})).toBeVisible();await reader.getByRole('button',{name:'Like · 0',exact:true}).click();await expect(reader.getByRole('button',{name:'Unlike · 1',exact:true})).toBeVisible();\n  479 |  await reader.goto('/#people');await reader.getByLabel('Search people').fill('collector_'+suffix);const person=reader.locator('.person').filter({hasText:'@collector_'+suffix});await person.getByRole('button',{name:'Follow',exact:true}).click();await expect(person.getByRole('button',{name:'Unfollow',exact:true})).toBeVisible();await person.getByRole('button',{name:'Unfollow',exact:true}).click();await expect(person.getByRole('button',{name:'Follow',exact:true})).toBeVisible();\n    at /Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e/journeys.spec.ts:476:87"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-11T07:38:26.219Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/Users/rohithmatam/Documents/all/afterframe/frontend/test-results/journeys-release-edges-pri-16c08-llow-and-read-notifications/test-failed-2.png"
+                    },
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/Users/rohithmatam/Documents/all/afterframe/frontend/test-results/journeys-release-edges-pri-16c08-llow-and-read-notifications/test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/Users/rohithmatam/Documents/all/afterframe/frontend/test-results/journeys-release-edges-pri-16c08-llow-and-read-notifications/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e/journeys.spec.ts",
+                    "column": 87,
+                    "line": 476
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "aa09586c1d16412a1f00-949c072d42598450aaae",
+          "file": "journeys.spec.ts",
+          "line": 470,
+          "column": 5
+        },
+        {
+          "title": "release edges: diary pagination, filters, network retry, double click and session tabs",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3715,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-11T07:38:28.775Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "aa09586c1d16412a1f00-f069c0d1597ef80be781",
+          "file": "journeys.spec.ts",
+          "line": 486,
+          "column": 5
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-11T07:38:16.840Z",
+    "duration": 19488.729,
+    "expected": 2,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}

@@ -1,0 +1,38 @@
+
+Running 1 test using 1 worker
+
+(node:75041) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/e2e/journeys.spec.ts:510:5 › auth recovery and watchlist ownership edge cases (13.7s)
+
+
+  1) tests/e2e/journeys.spec.ts:510:5 › auth recovery and watchlist ownership edge cases ───────────
+
+    Test was interrupted.
+
+    Error: locator.click: Test ended.
+    Call log:
+      - waiting for getByRole('button', { name: 'Save password' })
+
+
+      523 |  const match=String(mail.HTML).match(/href="([^"]+)"/);expect(!!match).toBe(true);const link=match![1].replaceAll('&amp;','&');const target=new URL(link);expect(target.hostname).toBe('127.0.0.1');expect(target.port).toBe('54321');
+      524 |  try{await page.goto(link);}catch{throw new Error('Recovery navigation failed; token omitted');}
+    > 525 |  await expect(page.getByLabel('New password',{exact:true})).toBeVisible();await page.getByLabel('New password',{exact:true}).fill(password+'Changed');await page.getByRole('button',{name:'Update password'}).click();await expect(page.getByRole('dialog')).toHaveCount(0);
+          |                                                                                                                                                                                                             ^
+      526 |  await page.reload();expect((await responseJSON(page,'me')).status).toBe(200);
+      527 | });
+      528 |
+        at /Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e/journeys.spec.ts:525:205
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/journeys-auth-recovery-and-watchlist-ownership-edge-cases/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/journeys-auth-recovery-and-watchlist-ownership-edge-cases/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/journeys-auth-recovery-and-watchlist-ownership-edge-cases/error-context.md
+
+  1 interrupted
+    tests/e2e/journeys.spec.ts:510:5 › auth recovery and watchlist ownership edge cases ────────────

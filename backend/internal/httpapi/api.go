@@ -115,7 +115,7 @@ func Handler(s *service.Service, a *auth.Verifier, origins []string) http.Handle
 		})
 		r.Get("/v1/{area}", func(w http.ResponseWriter, r *http.Request) {
 			q := r.URL.Query()
-			v, e := s.Read(r.Context(), User(r), chi.URLParam(r, "area"), service.Filter{TargetID: q.Get("user_id"), Query: q.Get("q"), Emotion: q.Get("emotion"), From: q.Get("from"), To: q.Get("to"), Month: q.Get("month"), FilmID: service.Int(q.Get("film_id")), Offset: int32(service.Int(q.Get("offset"))), Mine: q.Get("mine") == "true"})
+			v, e := s.Read(r.Context(), User(r), chi.URLParam(r, "area"), service.Filter{ObjectID: q.Get("id"), TargetID: q.Get("user_id"), Query: q.Get("q"), Emotion: q.Get("emotion"), From: q.Get("from"), To: q.Get("to"), Month: q.Get("month"), FilmID: service.Int(q.Get("film_id")), Offset: int32(service.Int(q.Get("offset"))), Mine: q.Get("mine") == "true"})
 			reply(w, v, e)
 		})
 		r.Post("/v1/{area}", func(w http.ResponseWriter, r *http.Request) {

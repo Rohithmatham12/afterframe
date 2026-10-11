@@ -31,8 +31,8 @@ services:
       GOTRUE_DB_DRIVER: postgres
       GOTRUE_DB_NAMESPACE: auth
       GOTRUE_DB_DATABASE_URL: postgres://postgres:${LOCAL_DB_PASSWORD}@db:5432/afterframe_auth?sslmode=disable&search_path=auth
-      GOTRUE_SITE_URL: http://localhost:3000
-      GOTRUE_URI_ALLOW_LIST: http://localhost:3000/**
+      GOTRUE_SITE_URL: http://127.0.0.1:3000
+      GOTRUE_URI_ALLOW_LIST: http://localhost:3000/**,http://127.0.0.1:3000/**
       GOTRUE_JWT_SECRET: ${LOCAL_JWT_SECRET}
       GOTRUE_JWT_EXP: 3600
       GOTRUE_CORS_ALLOWED_HEADERS: apikey,authorization,content-type,x-client-info,x-supabase-api-version

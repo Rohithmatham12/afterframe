@@ -60,10 +60,10 @@ type Input struct {
 	Reason      string   `json:"reason"`
 }
 type Filter struct {
-	Query, Emotion, From, To, Month, TargetID string
-	FilmID                                    int64
-	Offset                                    int32
-	Mine                                      bool
+	Query, Emotion, From, To, Month, TargetID, ObjectID string
+	FilmID                                              int64
+	Offset                                              int32
+	Mine                                                bool
 }
 
 func ID(s string) pgtype.UUID { u, e := uuid.Parse(s); return pgtype.UUID{Bytes: u, Valid: e == nil} }
@@ -126,7 +126,7 @@ func (s *Service) Film(ctx context.Context, id int64) (json.RawMessage, error) {
 	return q.UpsertFilm(ctx, pack(f))
 }
 func (s *Service) Read(ctx context.Context, user, area string, f Filter) (json.RawMessage, error) {
-	if len(f.Query) > 300 || f.Offset < 0 || f.Offset > 100000 {
+	if (f.ObjectID != "" && !ID(f.ObjectID).Valid) || len(f.Query) > 300 || f.Offset < 0 || f.Offset > 100000 {
 		return nil, ErrInvalid
 	}
 	for _, d := range []string{f.From, f.To} {
@@ -177,9 +177,9 @@ func (s *Service) Read(ctx context.Context, user, area string, f Filter) (json.R
 		case "resurface":
 			return q.Resurface(ctx)
 		case "watchlist":
-			return q.Watchlist(ctx)
+			return q.Watchlist(ctx, f.Offset)
 		case "lists":
-			return q.Lists(ctx, f.Mine)
+			return q.Lists(ctx, db.ListsParams{Column1: f.Mine, Column2: f.ObjectID, Offset: f.Offset})
 		case "people":
 			return q.Profiles(ctx, pgtype.Text{String: f.Query, Valid: true})
 		case "notifications":
@@ -334,6 +334,9 @@ func (s *Service) Write(ctx context.Context, user, area string, in Input) (json.
 		case "list-like":
 			if !ID(in.ID).Valid {
 				return nil, ErrInvalid
+			}
+			if _, e := q.ListAccess(ctx, ID(in.ID)); e != nil {
+				return nil, e
 			}
 			if in.Enabled {
 				return nil, q.LikeList(ctx, ID(in.ID))

@@ -1,0 +1,20 @@
+
+Running 13 tests using 1 worker
+
+(node:76253) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/e2e/journeys.spec.ts:63:5 › A casual viewer: signup, five logs, watchlist, list and returning session (4.6s)
+  ✓   2 tests/e2e/journeys.spec.ts:116:5 › B cinephile: ranked list, reorder, layered review, rewatch and edit (2.5s)
+  ✓   3 tests/e2e/journeys.spec.ts:161:5 › C Memory Vault: keyword, fuzzy recall, edit, ownership and deletion (5.5s)
+  ✓   4 tests/e2e/journeys.spec.ts:196:5 › D Taste Timeline: reflection without rewatch, comparison and persisted history (1.7s)
+  ✓   5 tests/e2e/journeys.spec.ts:231:5 › E multi-user spoiler-safe discovery: follow, payload non-disclosure and explicit reveal (3.5s)
+  ✓   6 tests/e2e/journeys.spec.ts:326:5 › responsive and accessibility audit (1.7s)
+  ✓   7 tests/e2e/journeys.spec.ts:347:5 › account privacy, avatar validation and complete local erasure (2.8s)
+  ✓   8 tests/e2e/journeys.spec.ts:401:5 › authenticated accessibility, navigation and offline fallback (3.0s)
+  ✓   9 tests/e2e/journeys.spec.ts:467:5 › release edges: reviews, explicit unwatched reveal, ownership and deletion (2.7s)
+  ✓  10 tests/e2e/journeys.spec.ts:560:5 › release edges: private lists, sharing, likes, unfollow and read notifications (2.3s)
+  ✓  11 tests/e2e/journeys.spec.ts:656:5 › release edges: diary pagination, filters, network retry, double click and session tabs (3.3s)
+  ✓  12 tests/e2e/journeys.spec.ts:725:5 › accessibility: keyboard dialog, reduced motion, text spacing and narrow reflow (2.0s)
+  ✓  13 tests/e2e/journeys.spec.ts:772:5 › auth recovery and watchlist ownership edge cases (2.9s)
+
+  13 passed (41.4s)

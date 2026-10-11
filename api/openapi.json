@@ -10,6 +10,13 @@
         "operationId": "get_profile",
         "parameters": [
           {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "q",
             "in": "query",
             "schema": {
@@ -180,6 +187,13 @@
       "get": {
         "operationId": "get_followers",
         "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "q",
             "in": "query",
@@ -355,6 +369,13 @@
         "operationId": "get_following",
         "parameters": [
           {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "q",
             "in": "query",
             "schema": {
@@ -529,6 +550,13 @@
         "operationId": "get_film-state",
         "parameters": [
           {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "q",
             "in": "query",
             "schema": {
@@ -699,6 +727,13 @@
       "get": {
         "operationId": "get_insights",
         "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "q",
             "in": "query",
@@ -873,6 +908,13 @@
       "get": {
         "operationId": "get_me",
         "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "q",
             "in": "query",
@@ -1146,6 +1188,13 @@
       "get": {
         "operationId": "get_diary",
         "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "q",
             "in": "query",
@@ -1423,6 +1472,13 @@
         "operationId": "get_timeline",
         "parameters": [
           {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "q",
             "in": "query",
             "schema": {
@@ -1698,6 +1754,13 @@
       "get": {
         "operationId": "get_memories",
         "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "q",
             "in": "query",
@@ -1975,6 +2038,13 @@
         "operationId": "get_resurface",
         "parameters": [
           {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "q",
             "in": "query",
             "schema": {
@@ -2148,6 +2218,13 @@
       "get": {
         "operationId": "get_watchlist",
         "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "q",
             "in": "query",
@@ -2425,6 +2502,13 @@
         "operationId": "get_lists",
         "parameters": [
           {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "q",
             "in": "query",
             "schema": {
@@ -2701,6 +2785,13 @@
         "operationId": "get_people",
         "parameters": [
           {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "q",
             "in": "query",
             "schema": {
@@ -2874,6 +2965,13 @@
       "get": {
         "operationId": "get_notifications",
         "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "q",
             "in": "query",
@@ -3151,6 +3249,13 @@
         "operationId": "get_reviews",
         "parameters": [
           {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "q",
             "in": "query",
             "schema": {
@@ -3427,6 +3532,13 @@
         "operationId": "get_feed",
         "parameters": [
           {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "q",
             "in": "query",
             "schema": {
@@ -3600,6 +3712,13 @@
       "get": {
         "operationId": "get_films",
         "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "q",
             "in": "query",

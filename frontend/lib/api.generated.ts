@@ -727,6 +727,7 @@ export interface operations {
   get_profile: {
     parameters: {
       query?: {
+        id?: string;
         q?: string;
         emotion?: string;
         from?: string;
@@ -822,6 +823,7 @@ export interface operations {
   get_followers: {
     parameters: {
       query?: {
+        id?: string;
         q?: string;
         emotion?: string;
         from?: string;
@@ -917,6 +919,7 @@ export interface operations {
   get_following: {
     parameters: {
       query?: {
+        id?: string;
         q?: string;
         emotion?: string;
         from?: string;
@@ -1012,6 +1015,7 @@ export interface operations {
   'get_film-state': {
     parameters: {
       query?: {
+        id?: string;
         q?: string;
         emotion?: string;
         from?: string;
@@ -1107,6 +1111,7 @@ export interface operations {
   get_insights: {
     parameters: {
       query?: {
+        id?: string;
         q?: string;
         emotion?: string;
         from?: string;
@@ -1202,6 +1207,7 @@ export interface operations {
   get_me: {
     parameters: {
       query?: {
+        id?: string;
         q?: string;
         emotion?: string;
         from?: string;
@@ -1386,6 +1392,7 @@ export interface operations {
   get_diary: {
     parameters: {
       query?: {
+        id?: string;
         q?: string;
         emotion?: string;
         from?: string;
@@ -1570,6 +1577,7 @@ export interface operations {
   get_timeline: {
     parameters: {
       query?: {
+        id?: string;
         q?: string;
         emotion?: string;
         from?: string;
@@ -1754,6 +1762,7 @@ export interface operations {
   get_memories: {
     parameters: {
       query?: {
+        id?: string;
         q?: string;
         emotion?: string;
         from?: string;
@@ -1938,6 +1947,7 @@ export interface operations {
   get_resurface: {
     parameters: {
       query?: {
+        id?: string;
         q?: string;
         emotion?: string;
         from?: string;
@@ -2033,6 +2043,7 @@ export interface operations {
   get_watchlist: {
     parameters: {
       query?: {
+        id?: string;
         q?: string;
         emotion?: string;
         from?: string;
@@ -2217,6 +2228,7 @@ export interface operations {
   get_lists: {
     parameters: {
       query?: {
+        id?: string;
         q?: string;
         emotion?: string;
         from?: string;
@@ -2401,6 +2413,7 @@ export interface operations {
   get_people: {
     parameters: {
       query?: {
+        id?: string;
         q?: string;
         emotion?: string;
         from?: string;
@@ -2496,6 +2509,7 @@ export interface operations {
   get_notifications: {
     parameters: {
       query?: {
+        id?: string;
         q?: string;
         emotion?: string;
         from?: string;
@@ -2680,6 +2694,7 @@ export interface operations {
   get_reviews: {
     parameters: {
       query?: {
+        id?: string;
         q?: string;
         emotion?: string;
         from?: string;
@@ -2864,6 +2879,7 @@ export interface operations {
   get_feed: {
     parameters: {
       query?: {
+        id?: string;
         q?: string;
         emotion?: string;
         from?: string;
@@ -2959,6 +2975,7 @@ export interface operations {
   get_films: {
     parameters: {
       query?: {
+        id?: string;
         q?: string;
         emotion?: string;
         from?: string;

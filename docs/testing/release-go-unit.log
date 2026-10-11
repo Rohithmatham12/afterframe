@@ -1,0 +1,11 @@
+?   	afterframe/cmd/api	[no test files]
+?   	afterframe/cmd/migrate	[no test files]
+?   	afterframe/cmd/verify-hosted	[no test files]
+ok  	afterframe/internal/auth	(cached)
+ok  	afterframe/internal/catalog	(cached)
+?   	afterframe/internal/db	[no test files]
+ok  	afterframe/internal/httpapi	(cached)
+ok  	afterframe/internal/memory	(cached)
+ok  	afterframe/internal/service	0.439s
+?   	afterframe/internal/spoilers	[no test files]
+ok  	afterframe/internal/taste	(cached)

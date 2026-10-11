@@ -435,3 +435,435 @@ test('authenticated accessibility, navigation and offline fallback', async ({
   await context.setOffline(false);
   expect(errors).toEqual([]);
 });
+
+async function mutate(
+  page: Page,
+  area: string,
+  body: unknown,
+  method = 'POST'
+) {
+  return page.evaluate(
+    async ({ area, body, method }) => {
+      const key = Object.keys(localStorage).find((k) =>
+        k.endsWith('-auth-token')
+      );
+      const token = key
+        ? JSON.parse(localStorage.getItem(key)!).access_token
+        : '';
+      const response = await fetch('http://127.0.0.1:8080/v1/' + area, {
+        method,
+        headers: {
+          Authorization: 'Bearer ' + token,
+          'Content-Type': 'application/json',
+        },
+        body: method === 'DELETE' ? undefined : JSON.stringify(body),
+      });
+      return { status: response.status, body: await response.json() };
+    },
+    { area, body, method }
+  );
+}
+
+test('release edges: reviews, explicit unwatched reveal, ownership and deletion', async ({
+  page,
+  browser,
+}) => {
+  await signup(page, 'editor');
+  await film(page);
+  await page.getByRole('button', { name: 'Write review' }).click();
+  await page
+    .getByLabel('Before watching · spoiler-safe')
+    .fill('静かな映画 — café <script>not code</script> ' + suffix);
+  await page
+    .getByLabel('After watching · plot discussion')
+    .fill('Secret turn ' + suffix);
+  await page
+    .getByLabel('After reflection · deeper interpretation')
+    .fill('Secret meaning ' + suffix);
+  await page.getByRole('button', { name: 'Publish review' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const own = (await responseJSON(page, 'reviews?film_id=550')).body.find(
+    (r: { username: string }) => r.username === 'editor_' + suffix
+  );
+  const second = await browser.newContext();
+  const reader = await second.newPage();
+  await signup(reader, 'edge_reader');
+  await film(reader);
+  const review = reader
+    .locator('.review')
+    .filter({ hasText: '@editor_' + suffix });
+  await expect(review.getByText('Secret turn ' + suffix)).toHaveCount(0);
+  expect(
+    (
+      await mutate(reader, 'reviews', {
+        id: own.id,
+        film_id: 550,
+        safe: 'hijack',
+      })
+    ).status
+  ).toBe(404);
+  expect((await mutate(reader, 'reviews/' + own.id, {}, 'DELETE')).status).toBe(
+    404
+  );
+  reader.once('dialog', (d) => d.accept());
+  await review
+    .getByRole('button', { name: 'Reveal spoilers', exact: true })
+    .click();
+  await expect(review.getByText('Secret turn ' + suffix)).toBeVisible();
+  expect((await responseJSON(reader, 'diary')).body).toHaveLength(0);
+  await reader.reload();
+  await expect(
+    reader
+      .locator('.review')
+      .filter({ hasText: '@editor_' + suffix })
+      .getByText('Secret turn ' + suffix)
+  ).toBeVisible();
+  reader.once('dialog', (d) =>
+    d.accept('Spoiler in safe text — automated local test')
+  );
+  await reader
+    .locator('.review')
+    .filter({ hasText: '@editor_' + suffix })
+    .getByRole('button', { name: 'Report', exact: true })
+    .click();
+  await expect(
+    reader.getByRole('status').filter({ hasText: 'Report submitted' })
+  ).toBeVisible();
+  const authored = page
+    .locator('.review')
+    .filter({ hasText: '@editor_' + suffix });
+  await authored.getByRole('button', { name: 'Edit review' }).click();
+  await page
+    .getByLabel('Before watching · spoiler-safe')
+    .fill('Updated introduction ' + suffix);
+  await page.getByRole('button', { name: 'Publish review' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(
+    authored.getByText('Updated introduction ' + suffix)
+  ).toBeVisible();
+  expect(
+    (await mutate(page, 'reviews', { film_id: 550, safe: 'x'.repeat(10001) }))
+      .status
+  ).toBe(400);
+  page.once('dialog', (d) => d.accept());
+  await authored.getByRole('button', { name: 'Delete review' }).click();
+  await expect(
+    page.locator('.review').filter({ hasText: '@editor_' + suffix })
+  ).toHaveCount(0);
+  await reader.reload();
+  await expect(
+    reader.locator('.review').filter({ hasText: '@editor_' + suffix })
+  ).toHaveCount(0);
+  await second.close();
+});
+
+test('release edges: private lists, sharing, likes, unfollow and read notifications', async ({
+  page,
+  browser,
+}) => {
+  await signup(page, 'collector');
+  const me = (await responseJSON(page, 'me')).body;
+  const list = await mutate(page, 'lists', {
+    title: 'Private collection ' + suffix,
+    private: true,
+    ranked: true,
+    film_ids: [550, 603],
+  });
+  expect(list.status).toBe(200);
+  const second = await browser.newContext();
+  const reader = await second.newPage();
+  await signup(reader, 'list_reader');
+  await reader.goto('/#lists/' + list.body.id);
+  await expect(
+    reader.getByRole('heading', { name: 'Private collection ' + suffix })
+  ).toHaveCount(0);
+  expect(
+    (
+      await mutate(reader, 'lists', {
+        id: list.body.id,
+        title: 'hijack',
+        film_ids: [550],
+      })
+    ).status
+  ).toBe(404);
+  expect(
+    (await mutate(reader, 'list-like', { id: list.body.id, enabled: true }))
+      .status
+  ).not.toBe(200);
+  expect(
+    (
+      await mutate(page, 'lists', {
+        id: list.body.id,
+        title: 'Shared collection ' + suffix,
+        private: false,
+        ranked: true,
+        film_ids: [603, 550],
+      })
+    ).status
+  ).toBe(200);
+  await reader.reload();
+  await expect(
+    reader.getByRole('heading', { name: 'Shared collection ' + suffix })
+  ).toBeVisible();
+  await reader.getByRole('button', { name: 'Like · 0', exact: true }).click();
+  await expect(
+    reader.getByRole('button', { name: 'Unlike · 1', exact: true })
+  ).toBeVisible();
+  await reader.goto('/#people');
+  await reader.getByLabel('Search people').fill('collector_' + suffix);
+  const person = reader
+    .locator('.person')
+    .filter({ hasText: '@collector_' + suffix });
+  await person.getByRole('button', { name: 'Follow', exact: true }).click();
+  await expect(
+    person.getByRole('button', { name: 'Unfollow', exact: true })
+  ).toBeVisible();
+  await person.getByRole('button', { name: 'Unfollow', exact: true }).click();
+  await expect(
+    person.getByRole('button', { name: 'Follow', exact: true })
+  ).toBeVisible();
+  expect(
+    (
+      await responseJSON(
+        reader,
+        'following?user_id=' + (await responseJSON(reader, 'me')).body.id
+      )
+    ).body
+  ).toHaveLength(0);
+  await page.goto('/#notifications');
+  await expect(page.locator('.notification')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Mark all read' }).click();
+  await expect(
+    page.locator('.notification').getByText(/· Read$/)
+  ).toBeVisible();
+  expect(
+    (await responseJSON(page, 'notifications')).body.every(
+      (n: { read: boolean }) => n.read
+    )
+  ).toBe(true);
+  expect((await responseJSON(reader, 'profile?user_id=' + me.id)).status).toBe(
+    200
+  );
+  await page.goto('/#lists/' + list.body.id);
+  page.once('dialog', (d) => d.accept());
+  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Shared collection ' + suffix })
+  ).toHaveCount(0);
+  await second.close();
+});
+
+test('release edges: diary pagination, filters, network retry, double click and session tabs', async ({
+  page,
+  context,
+}) => {
+  await signup(page, 'history');
+  await film(page);
+  await page.getByRole('button', { name: 'Log this film' }).click();
+  await page.getByLabel('Watched on', { exact: true }).fill('2024-11-02');
+  await page
+    .getByLabel('Diary notes', { exact: true })
+    .fill('Retry remains one viewing');
+  await context.setOffline(true);
+  await page.getByRole('button', { name: 'Save viewing' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(1);
+  await expect(
+    page.getByRole('button', { name: 'Save viewing' })
+  ).toBeEnabled();
+  await context.setOffline(false);
+  await page.getByRole('button', { name: 'Save viewing' }).dblclick();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  expect((await responseJSON(page, 'diary')).body).toHaveLength(1);
+  for (let n = 0; n < 51; n++) {
+    const saved = await mutate(page, 'diary', {
+      film_id: 550,
+      watched_on: '2024-10-10',
+      rating: 4,
+      notes: 'History ' + n,
+      request_id: crypto.randomUUID(),
+    });
+    expect(saved.status).toBe(200);
+  }
+  await page.goto('/#diary');
+  await expect(page.locator('.diary article')).toHaveCount(50);
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(page.locator('.diary article')).toHaveCount(2);
+  expect((await responseJSON(page, 'diary?month=2024-11')).body).toHaveLength(
+    1
+  );
+  expect((await responseJSON(page, 'diary?month=2020-01')).body).toHaveLength(
+    0
+  );
+  const entry = (await responseJSON(page, 'diary?month=2024-11')).body[0];
+  expect((await mutate(page, 'diary/' + entry.id, {}, 'DELETE')).status).toBe(
+    200
+  );
+  expect((await responseJSON(page, 'diary?month=2024-11')).body).toHaveLength(
+    0
+  );
+  const tab = await context.newPage();
+  await tab.goto('/#settings');
+  await expect(tab.getByLabel('Username', { exact: true })).toHaveValue(
+    'history_' + suffix
+  );
+  await page.goto('/#discover');
+  if (process.env.MOBILE === '1')
+    await page
+      .locator('summary')
+      .filter({ hasText: /^More$/ })
+      .click();
+  await page
+    .getByRole('button', { name: 'Sign out', exact: true })
+    .filter({ visible: true })
+    .click();
+  await expect(
+    tab.getByRole('button', { name: 'Sign in', exact: true })
+  ).toBeVisible();
+  await tab.close();
+});
+
+test('accessibility: keyboard dialog, reduced motion, text spacing and narrow reflow', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await page.keyboard.press('Tab');
+  await expect(
+    page.getByRole('link', { name: 'Skip to content' })
+  ).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('main')).toBeFocused();
+  await page.getByRole('button', { name: 'Sign in', exact: true }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Close dialog' })
+  ).toBeFocused();
+  for (let i = 0; i < 9; i++) {
+    await page.keyboard.press('Tab');
+    expect(
+      await page.evaluate(() => !!document.activeElement?.closest('dialog'))
+    ).toBe(true);
+  }
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Sign in', exact: true })
+  ).toBeFocused();
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.addStyleTag({
+    content:
+      '* {letter-spacing:.12em !important;word-spacing:.16em !important;line-height:1.5 !important} p {margin-bottom:2em !important}',
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth
+    )
+  ).toBe(true);
+  const results = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+    .analyze();
+  expect(results.violations).toEqual([]);
+  await page.screenshot({
+    path: '../docs/testing/accessibility-320-text-spacing.png',
+  });
+});
+
+test('auth recovery and watchlist ownership edge cases', async ({
+  page,
+  browser,
+  request,
+}) => {
+  await signup(page, 'recovery');
+  const email = `recovery-${suffix}@example.test`;
+  const me = (await responseJSON(page, 'me')).body;
+  for (const id of [550, 603])
+    expect(
+      (
+        await mutate(page, 'watchlist', {
+          film_id: id,
+          enabled: true,
+          private: true,
+        })
+      ).status
+    ).toBe(200);
+  const second = await browser.newContext();
+  const outsider = await second.newPage();
+  await signup(outsider, 'watch_outsider');
+  expect((await responseJSON(outsider, 'watchlist')).body).toHaveLength(0);
+  expect(
+    (await mutate(outsider, 'watchlist', { film_id: 550, enabled: false }))
+      .status
+  ).toBe(200);
+  expect((await responseJSON(page, 'watchlist')).body).toHaveLength(2);
+  expect(
+    (
+      await mutate(outsider, 'me', {
+        username: me.username,
+        name: 'duplicate',
+        bio: '',
+        private: false,
+        resurface: true,
+      })
+    ).status
+  ).toBe(409);
+  await second.close();
+  expect(
+    (await mutate(page, 'watchlist', { film_id: 550, enabled: false })).status
+  ).toBe(200);
+  expect((await responseJSON(page, 'watchlist')).body).toHaveLength(1);
+  const rejected = await request.get('http://127.0.0.1:8080/v1/memories', {
+    headers: { Authorization: 'Bearer invalid-token' },
+  });
+  expect(rejected.status()).toBe(401);
+  await page.goto('/#discover');
+  if (process.env.MOBILE === '1')
+    await page
+      .locator('summary')
+      .filter({ hasText: /^More$/ })
+      .click();
+  await page
+    .getByRole('button', { name: 'Sign out', exact: true })
+    .filter({ visible: true })
+    .click();
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await page.getByRole('button', { name: 'Forgot password?' }).click();
+  await page.getByLabel('Email', { exact: true }).fill(email);
+  await page.getByRole('button', { name: 'Send recovery email' }).click();
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Check your email' })
+  ).toBeVisible();
+  let messages: { ID: string }[] = [];
+  await expect
+    .poll(async () => {
+      const response = await request.get(
+        'http://127.0.0.1:8025/api/v1/search',
+        { params: { query: 'to:' + email } }
+      );
+      messages = (await response.json()).messages || [];
+      return messages.length;
+    })
+    .toBeGreaterThan(0);
+  const mail = await (
+    await request.get('http://127.0.0.1:8025/api/v1/message/' + messages[0].ID)
+  ).json();
+  const match = String(mail.HTML).match(/href="([^"]+)"/);
+  expect(!!match).toBe(true);
+  const link = match![1].replaceAll('&amp;', '&');
+  const target = new URL(link);
+  expect(target.hostname).toBe('127.0.0.1');
+  expect(target.port).toBe('54321');
+  try {
+    await page.goto(link);
+  } catch {
+    throw new Error('Recovery navigation failed; token omitted');
+  }
+  await expect(page.getByLabel('New password', { exact: true })).toBeVisible();
+  await page
+    .getByLabel('New password', { exact: true })
+    .fill(password + 'Changed');
+  await page.getByRole('button', { name: 'Update password' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.reload();
+  expect((await responseJSON(page, 'me')).status).toBe(200);
+});

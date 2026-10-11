@@ -1396,3 +1396,36 @@ dialog h2 {
     width: 100%;
   }
 }
+
+/* Reflow instead of clipping when users enlarge text or increase spacing. */
+@media (max-width: 360px) {
+  .topbar {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 68px;
+    gap: 0.5rem;
+    padding-block: 0.75rem;
+  }
+  .top-actions {
+    margin-left: auto;
+  }
+}
+@media (max-width: 600px) {
+  .hero {
+    height: auto;
+    min-height: 330px;
+    display: flex;
+    align-items: flex-end;
+  }
+  .hero > img {
+    position: absolute;
+    inset: 0;
+  }
+  .hero-copy {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    padding: 1.4rem;
+    transform: none;
+  }
+}

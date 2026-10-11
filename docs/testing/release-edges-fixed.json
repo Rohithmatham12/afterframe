@@ -1,0 +1,268 @@
+{
+  "config": {
+    "argv": [
+      "/Users/rohithmatam/.nvm/versions/node/v24.11.1/bin/node",
+      "/Users/rohithmatam/Documents/all/afterframe/frontend/node_modules/.bin/playwright",
+      "test",
+      "--grep",
+      "release edges"
+    ],
+    "configFile": "/Users/rohithmatam/Documents/all/afterframe/frontend/playwright.config.ts",
+    "rootDir": "/Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/rohithmatam/Documents/all/afterframe/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "/Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 120000
+      }
+    ],
+    "filteredProjects": [
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "/Users/rohithmatam/Documents/all/afterframe/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "",
+        "testDir": "/Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e",
+        "snapshotDir": "/Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e",
+        "testIgnore": [],
+        "testMatch": "**/*.@(spec|test).?(c|m)[jt]s?(x)",
+        "timeout": 120000,
+        "use": {
+          "baseURL": "http://127.0.0.1:3000",
+          "browserName": "chromium",
+          "channel": "chrome",
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "trace": "off",
+          "screenshot": "only-on-failure"
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": ""
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "../docs/testing/release-edges-fixed.json"
+        }
+      ],
+      [
+        "html",
+        {
+          "outputFolder": "../.local/playwright-report",
+          "open": "never"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "default",
+    "updateSourceMethod": "patch",
+    "version": "1.64.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "journeys.spec.ts",
+      "file": "journeys.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "release edges: reviews, explicit unwatched reveal, ownership and deletion",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 6627,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-11T07:42:34.727Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "aa09586c1d16412a1f00-10104d1d9820a2e87fd9",
+          "file": "journeys.spec.ts",
+          "line": 448,
+          "column": 5
+        },
+        {
+          "title": "release edges: private lists, sharing, likes, unfollow and read notifications",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 17965,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.notification').getByText('Read', { exact: true })\nExpected: visible\nTimeout: 15000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" locator('.notification').getByText('Read', { exact: true }) with timeout 15000ms\u001b[22m\n\u001b[2m  - waiting for locator('.notification').getByText('Read', { exact: true })\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.notification').getByText('Read', { exact: true })\nExpected: visible\nTimeout: 15000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" locator('.notification').getByText('Read', { exact: true }) with timeout 15000ms\u001b[22m\n\u001b[2m  - waiting for locator('.notification').getByText('Read', { exact: true })\u001b[22m\n\n    at /Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e/journeys.spec.ts:481:233",
+                    "location": {
+                      "file": "/Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e/journeys.spec.ts",
+                      "column": 233,
+                      "line": 481
+                    },
+                    "snippet": "  479 |  await reader.goto('/#people');await reader.getByLabel('Search people').fill('collector_'+suffix);const person=reader.locator('.person').filter({hasText:'@collector_'+suffix});await person.getByRole('button',{name:'Follow',exact:true}).click();await expect(person.getByRole('button',{name:'Unfollow',exact:true})).toBeVisible();await person.getByRole('button',{name:'Unfollow',exact:true}).click();await expect(person.getByRole('button',{name:'Follow',exact:true})).toBeVisible();\n  480 |  expect((await responseJSON(reader,'following?user_id='+(await responseJSON(reader,'me')).body.id)).body).toHaveLength(0);\n> 481 |  await page.goto('/#notifications');await expect(page.locator('.notification')).toHaveCount(1);await page.getByRole('button',{name:'Mark all read'}).click();await expect(page.locator('.notification').getByText('Read',{exact:true})).toBeVisible();expect((await responseJSON(page,'notifications')).body.every((n:{read:boolean})=>n.read)).toBe(true);\n      |                                                                                                                                                                                                                                         ^\n  482 |  expect((await responseJSON(reader,'profile?user_id='+me.id)).status).toBe(200);\n  483 |  await page.goto('/#lists/'+list.body.id);page.once('dialog',d=>d.accept());await page.getByRole('button',{name:'Delete',exact:true}).click();await expect(page.getByRole('heading',{name:'Shared collection '+suffix})).toHaveCount(0);await second.close();\n  484 | });"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e/journeys.spec.ts",
+                        "column": 233,
+                        "line": 481
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.notification').getByText('Read', { exact: true })\nExpected: visible\nTimeout: 15000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" locator('.notification').getByText('Read', { exact: true }) with timeout 15000ms\u001b[22m\n\u001b[2m  - waiting for locator('.notification').getByText('Read', { exact: true })\u001b[22m\n\n\n  479 |  await reader.goto('/#people');await reader.getByLabel('Search people').fill('collector_'+suffix);const person=reader.locator('.person').filter({hasText:'@collector_'+suffix});await person.getByRole('button',{name:'Follow',exact:true}).click();await expect(person.getByRole('button',{name:'Unfollow',exact:true})).toBeVisible();await person.getByRole('button',{name:'Unfollow',exact:true}).click();await expect(person.getByRole('button',{name:'Follow',exact:true})).toBeVisible();\n  480 |  expect((await responseJSON(reader,'following?user_id='+(await responseJSON(reader,'me')).body.id)).body).toHaveLength(0);\n> 481 |  await page.goto('/#notifications');await expect(page.locator('.notification')).toHaveCount(1);await page.getByRole('button',{name:'Mark all read'}).click();await expect(page.locator('.notification').getByText('Read',{exact:true})).toBeVisible();expect((await responseJSON(page,'notifications')).body.every((n:{read:boolean})=>n.read)).toBe(true);\n      |                                                                                                                                                                                                                                         ^\n  482 |  expect((await responseJSON(reader,'profile?user_id='+me.id)).status).toBe(200);\n  483 |  await page.goto('/#lists/'+list.body.id);page.once('dialog',d=>d.accept());await page.getByRole('button',{name:'Delete',exact:true}).click();await expect(page.getByRole('heading',{name:'Shared collection '+suffix})).toHaveCount(0);await second.close();\n  484 | });\n    at /Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e/journeys.spec.ts:481:233"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-11T07:42:44.293Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/Users/rohithmatam/Documents/all/afterframe/frontend/test-results/journeys-release-edges-pri-16c08-llow-and-read-notifications/test-failed-1.png"
+                    },
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/Users/rohithmatam/Documents/all/afterframe/frontend/test-results/journeys-release-edges-pri-16c08-llow-and-read-notifications/test-failed-2.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/Users/rohithmatam/Documents/all/afterframe/frontend/test-results/journeys-release-edges-pri-16c08-llow-and-read-notifications/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e/journeys.spec.ts",
+                    "column": 233,
+                    "line": 481
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "aa09586c1d16412a1f00-949c072d42598450aaae",
+          "file": "journeys.spec.ts",
+          "line": 470,
+          "column": 5
+        },
+        {
+          "title": "release edges: diary pagination, filters, network retry, double click and session tabs",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2346,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-11T07:43:02.806Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "aa09586c1d16412a1f00-f069c0d1597ef80be781",
+          "file": "journeys.spec.ts",
+          "line": 486,
+          "column": 5
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-11T07:42:34.350Z",
+    "duration": 31740.271,
+    "expected": 2,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}

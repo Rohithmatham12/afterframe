@@ -18,17 +18,21 @@ import {
 } from 'lucide-react';
 import { api, result, setToken, type Models } from '@/lib/api';
 import { supabase } from '@/lib/auth';
-import {
-  AuthForm,
-  ListForm,
-  LogForm,
-  MemoryForm,
-  OpinionForm,
-  ReviewForm,
-} from './forms';
-import { Diary, Lists, Memories, People, Settings, Timeline } from './library';
-import { Reviews } from './reviews';
-import ProfileView from './profile';
+import dynamic from 'next/dynamic';
+const AuthForm = dynamic(() => import('./forms').then((m) => m.AuthForm));
+const ListForm = dynamic(() => import('./forms').then((m) => m.ListForm));
+const LogForm = dynamic(() => import('./forms').then((m) => m.LogForm));
+const MemoryForm = dynamic(() => import('./forms').then((m) => m.MemoryForm));
+const OpinionForm = dynamic(() => import('./forms').then((m) => m.OpinionForm));
+const ReviewForm = dynamic(() => import('./forms').then((m) => m.ReviewForm));
+const Diary = dynamic(() => import('./library').then((m) => m.Diary));
+const Lists = dynamic(() => import('./library').then((m) => m.Lists));
+const Memories = dynamic(() => import('./library').then((m) => m.Memories));
+const People = dynamic(() => import('./library').then((m) => m.People));
+const Settings = dynamic(() => import('./library').then((m) => m.Settings));
+const Timeline = dynamic(() => import('./library').then((m) => m.Timeline));
+const Reviews = dynamic(() => import('./reviews').then((m) => m.Reviews));
+const ProfileView = dynamic(() => import('./profile'));
 import { Empty, Modal, Poster, go, message } from './ui';
 type Dialog = { kind: string; value?: unknown } | null;
 const navigation = [
@@ -76,7 +80,11 @@ const titles: Record<string, [string, string]> = {
     'Your profile, your privacy, your preferences.',
   ],
 };
-export default function Cinema() {
+export default function Cinema({
+  initialFilms = [],
+}: {
+  initialFilms?: Models['Film'][];
+}) {
   const [route, setRoute] = useState('discover'),
     [session, setSession] = useState<string | null>(null),
     [ready, setReady] = useState(false),
@@ -91,7 +99,7 @@ export default function Cinema() {
     [section, setSection] = useState('popular'),
     [page, setPage] = useState(1),
     [month, setMonth] = useState('');
-  const [films, setFilms] = useState<Models['Film'][]>([]),
+  const [films, setFilms] = useState<Models['Film'][]>(initialFilms),
     [film, setFilm] = useState<Models['Film'] | null>(null),
     [diary, setDiary] = useState<Models['Viewing'][]>([]),
     [memories, setMemories] = useState<Models['Memory'][]>([]),
@@ -181,7 +189,7 @@ export default function Cinema() {
   useEffect(() => {
     let live = true;
     if (!ready) return;
-    setLoading(true);
+    setLoading(area !== 'discover' || films.length === 0);
     setError('');
     async function load() {
       if (area === 'discover') {
@@ -230,7 +238,11 @@ export default function Cinema() {
             break;
           }
           case 'watchlist': {
-            const d = result(await api.GET('/v1/watchlist'));
+            const d = result(
+              await api.GET('/v1/watchlist', {
+                params: { query: { offset: (page - 1) * 50 } },
+              })
+            );
             if (live) setFilms(d.map((x) => x.film));
             break;
           }
@@ -257,8 +269,17 @@ export default function Cinema() {
             break;
           }
           case 'lists': {
-            const d = result(await api.GET('/v1/lists'));
-            if (live) setLists(routeID ? d.filter((x) => x.id === routeID) : d);
+            const d = result(
+              await api.GET('/v1/lists', {
+                params: {
+                  query: {
+                    id: routeID || '',
+                    offset: routeID ? 0 : (page - 1) * 30,
+                  },
+                },
+              })
+            );
+            if (live) setLists(d);
             break;
           }
           case 'feed': {
@@ -444,9 +465,12 @@ export default function Cinema() {
                   {films[0].backdrop && (
                     <img
                       src={
-                        'https://image.tmdb.org/t/p/w1280' + films[0].backdrop
+                        'https://image.tmdb.org/t/p/w780' + films[0].backdrop
                       }
                       alt=""
+                      fetchPriority="high"
+                      width={1280}
+                      height={720}
                     />
                   )}
                   <div className="hero-shade" />
@@ -818,7 +842,7 @@ export default function Cinema() {
                 </>
               )}
               {area === 'profile' && (
-                <ProfileView id={routeID} notify={notify} />
+                <ProfileView key={routeID} id={routeID} notify={notify} />
               )}
               {area === 'settings' && profile && (
                 <Settings
@@ -897,18 +921,21 @@ export default function Cinema() {
                   </p>
                 </section>
               )}
-              {['discover', 'diary', 'feed'].includes(area) && (
-                <div className="pagination">
-                  <button
-                    disabled={page === 1}
-                    onClick={() => setPage((n) => n - 1)}
-                  >
-                    Previous
-                  </button>
-                  <span>Page {page}</span>
-                  <button onClick={() => setPage((n) => n + 1)}>Next</button>
-                </div>
-              )}
+              {['discover', 'diary', 'feed', 'watchlist', 'lists'].includes(
+                area
+              ) &&
+                !routeID && (
+                  <div className="pagination">
+                    <button
+                      disabled={page === 1}
+                      onClick={() => setPage((n) => n - 1)}
+                    >
+                      Previous
+                    </button>
+                    <span>Page {page}</span>
+                    <button onClick={() => setPage((n) => n + 1)}>Next</button>
+                  </div>
+                )}
             </>
           )}
           <footer>

@@ -1,0 +1,48 @@
+
+Running 3 tests using 1 worker
+
+(node:70095) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/e2e/journeys.spec.ts:448:5 › release edges: reviews, explicit unwatched reveal, ownership and deletion (6.6s)
+  ✘  2 tests/e2e/journeys.spec.ts:470:5 › release edges: private lists, sharing, likes, unfollow and read notifications (18.0s)
+(node:70327) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  3 tests/e2e/journeys.spec.ts:486:5 › release edges: diary pagination, filters, network retry, double click and session tabs (2.3s)
+
+
+  1) tests/e2e/journeys.spec.ts:470:5 › release edges: private lists, sharing, likes, unfollow and read notifications 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('.notification').getByText('Read', { exact: true })
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('.notification').getByText('Read', { exact: true }) with timeout 15000ms
+      - waiting for locator('.notification').getByText('Read', { exact: true })
+
+
+      479 |  await reader.goto('/#people');await reader.getByLabel('Search people').fill('collector_'+suffix);const person=reader.locator('.person').filter({hasText:'@collector_'+suffix});await person.getByRole('button',{name:'Follow',exact:true}).click();await expect(person.getByRole('button',{name:'Unfollow',exact:true})).toBeVisible();await person.getByRole('button',{name:'Unfollow',exact:true}).click();await expect(person.getByRole('button',{name:'Follow',exact:true})).toBeVisible();
+      480 |  expect((await responseJSON(reader,'following?user_id='+(await responseJSON(reader,'me')).body.id)).body).toHaveLength(0);
+    > 481 |  await page.goto('/#notifications');await expect(page.locator('.notification')).toHaveCount(1);await page.getByRole('button',{name:'Mark all read'}).click();await expect(page.locator('.notification').getByText('Read',{exact:true})).toBeVisible();expect((await responseJSON(page,'notifications')).body.every((n:{read:boolean})=>n.read)).toBe(true);
+          |                                                                                                                                                                                                                                         ^
+      482 |  expect((await responseJSON(reader,'profile?user_id='+me.id)).status).toBe(200);
+      483 |  await page.goto('/#lists/'+list.body.id);page.once('dialog',d=>d.accept());await page.getByRole('button',{name:'Delete',exact:true}).click();await expect(page.getByRole('heading',{name:'Shared collection '+suffix})).toHaveCount(0);await second.close();
+      484 | });
+        at /Users/rohithmatam/Documents/all/afterframe/frontend/tests/e2e/journeys.spec.ts:481:233
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/journeys-release-edges-pri-16c08-llow-and-read-notifications/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/journeys-release-edges-pri-16c08-llow-and-read-notifications/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/journeys-release-edges-pri-16c08-llow-and-read-notifications/error-context.md
+
+  1 failed
+    tests/e2e/journeys.spec.ts:470:5 › release edges: private lists, sharing, likes, unfollow and read notifications 
+  2 passed (31.7s)

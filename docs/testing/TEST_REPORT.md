@@ -31,8 +31,24 @@ Local GoTrue schema/CORS; duplicate film-title selectors; memory label associati
 
 - Final complete current suite: PASS, 8 tests — final-complete.json and final-complete.log.
 
-## Coverage limitations
-The browser scenarios do not yet exhaust every step and adversarial case in the master brief. Hosted email/Google OAuth, production permissions/proxy behavior, performance budgets under load, full analytics, broad competitor validation, discovery completeness, moderation operations and claim-level architecture evidence remain open. A verification skill file's existence/schema validation is not feature completion.
+## Final verification checkpoint — 2026-10-11
+- Real Google OAuth: PASS. User completed Google consent; callback, Go-protected profile and persistence after reload verified. See OAUTH_VERIFICATION.md.
+- Hosted account deletion: PASS — hosted-erasure-isolated.log. Only a disposable hosted Auth account was deleted; application data used a disposable local PostgreSQL database. Login and stale-token access were rejected afterward.
+- Current desktop suite: **13 passed** — release-final.log/json. Real Go API/PostgreSQL/Auth, no mocked application endpoints.
+- Go unit/race and race-enabled Testcontainers: PASS — release-go-unit.log, release-go-race.log, release-query-audit.log.
+- Frontend formatting/lint/typecheck/Vitest/build: PASS — release-*.log.
+- Added browser coverage: review edit/delete/report and literal script text; private/public list visibility, unauthorized writes and likes; unfollow/read notifications; diary pagination/filter/delete, network retry, double-click idempotency and cross-tab sign-out; password recovery through local Mailpit; watchlist ownership; keyboard dialog focus, reduced motion and 320px text-spacing reflow.
+- Fixed inaccessible list-like responses, unbounded collection/profile reads, oversized embedded film payloads, dialog focus escape, narrow header/hero overflow and local recovery redirect configuration. Failure-run evidence is retained.
+- Query plans from real PostgreSQL with RLS and 2,000-row fixtures: query-plans.json. This is bounded local query evidence, not production load certification.
+- Architecture: 16 implementation anchors verified with file hashes and line spans in ../architecture/SOURCE_AUDIT.md. Eight Archify description artifacts retain their passing checks; remote repository provenance remains unavailable.
+- Accessibility: axe checks plus keyboard/reflow tests pass; the saved 320px text-spacing screenshot was visually reviewed. No claim of comprehensive human screen-reader testing.
 
-## External setup
-Root .env SUPABASE_URL formatting repaired; hosted Auth connectivity now returns HTTP 200 and reports Google enabled. This does not prove a completed OAuth sign-in. Hosted erasure requires SUPABASE_SECRET_KEY. Public deployment requires explicit authorization. No secrets are recorded in evidence.
+## Coverage limitations and release decision
+**NOT READY TO PUBLISH.** Hosted email confirmation, production permissions/proxy behavior, load testing, installed-device PWA lifecycle, manual assistive-technology testing, full discovery/analytics/moderation scope and broad competitor validation are not established by these tests. Archify repository-backed provenance requires a real remote identity. A verification skill's existence is not feature completion.
+
+No public deployment or hosted application-database migrations occurred. Public deployment remains subject to explicit authorization. Credentials remain in local ignored environment files; evidence contains no authentication tokens.
+
+## Final mobile and performance results
+- Final mobile suite: **13 passed** — release-mobile.log/json.
+- Updated Go container build: PASS — release-docker-build.log.
+- Final local Lighthouse mobile: performance 93, accessibility 100, best-practices 100, seo 100, agentic-browsing 100. largest-contentful-paint: 2.7 s, cumulative-layout-shift: 0.01, total-blocking-time: 220 ms. See lighthouse-release.report.json/html. Single local lab run, not field or load metrics.

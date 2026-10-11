@@ -8,6 +8,8 @@ sql:
       - migrations/000003_account_erasure.up.sql
       - migrations/000004_erasure_retry.up.sql
       - migrations/000005_film_credits.up.sql
+      - migrations/000006_read_indexes.up.sql
+      - migrations/000007_film_cards.up.sql
     gen:
       go:
         package: db
