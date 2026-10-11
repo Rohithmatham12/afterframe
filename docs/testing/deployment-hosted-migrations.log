@@ -1,0 +1,8 @@
+Applied migrations/000001_init.up.sql
+Applied migrations/000002_security.up.sql
+Applied migrations/000003_account_erasure.up.sql
+Applied migrations/000004_erasure_retry.up.sql
+Applied migrations/000005_film_credits.up.sql
+Applied migrations/000006_read_indexes.up.sql
+Applied migrations/000007_film_cards.up.sql
+Applied migrations/000008_hosted_permissions.up.sql

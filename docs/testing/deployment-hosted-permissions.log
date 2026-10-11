@@ -1,0 +1,2 @@
+PASS: browser roles have no application table grants
+PASS: runtime transaction role and private-memory RLS read work
