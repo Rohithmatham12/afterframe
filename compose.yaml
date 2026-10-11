@@ -1,0 +1,51 @@
+name: afterframe
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_PASSWORD: ${LOCAL_DB_PASSWORD}
+      POSTGRES_DB: afterframe
+    ports: ["127.0.0.1:55432:5432"]
+    volumes:
+      - afterframe-db:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U postgres -d afterframe"]
+      interval: 2s
+      retries: 30
+  db-init:
+    image: pgvector/pgvector:pg17
+    depends_on:
+      db: {condition: service_healthy}
+    environment:
+      PGPASSWORD: ${LOCAL_DB_PASSWORD}
+    command: [sh, -c, "psql -h db -U postgres -d postgres -tAc \"SELECT 1 FROM pg_database WHERE datname='afterframe_auth'\" | grep -q 1 || createdb -h db -U postgres afterframe_auth; psql -h db -U postgres -d afterframe_auth -c \"CREATE SCHEMA IF NOT EXISTS auth;\""]
+  auth:
+    image: supabase/gotrue:v2.177.0
+    depends_on:
+      db-init: {condition: service_completed_successfully}
+    ports: ["127.0.0.1:54321:9999"]
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: http://127.0.0.1:54321
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_NAMESPACE: auth
+      GOTRUE_DB_DATABASE_URL: postgres://postgres:${LOCAL_DB_PASSWORD}@db:5432/afterframe_auth?sslmode=disable&search_path=auth
+      GOTRUE_SITE_URL: http://localhost:3000
+      GOTRUE_URI_ALLOW_LIST: http://localhost:3000/**
+      GOTRUE_JWT_SECRET: ${LOCAL_JWT_SECRET}
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_CORS_ALLOWED_HEADERS: apikey,authorization,content-type,x-client-info,x-supabase-api-version
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+      GOTRUE_SMTP_HOST: mail
+      GOTRUE_SMTP_PORT: 1025
+      GOTRUE_SMTP_ADMIN_EMAIL: auth@afterframe.local
+      GOTRUE_RATE_LIMIT_EMAIL_SENT: 1000
+  mail:
+    image: axllent/mailpit:v1.27
+    ports: ["127.0.0.1:8025:8025"]
+volumes:
+  afterframe-db:

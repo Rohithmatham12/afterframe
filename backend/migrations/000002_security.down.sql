@@ -1,0 +1,11 @@
+DROP POLICY IF EXISTS items_read ON list_items;
+DROP POLICY IF EXISTS items_write ON list_items;
+DROP POLICY IF EXISTS review_like_read ON review_likes;
+DROP POLICY IF EXISTS review_like_write ON review_likes;
+DROP POLICY IF EXISTS list_like_read ON list_likes;
+DROP POLICY IF EXISTS list_like_write ON list_likes;
+DROP POLICY IF EXISTS comment_read ON comments;
+DROP POLICY IF EXISTS comment_write ON comments;
+DROP POLICY IF EXISTS notification_create ON notifications;
+DROP POLICY IF EXISTS notification_update ON notifications;
+DROP POLICY IF EXISTS analytics_owner ON analytics;

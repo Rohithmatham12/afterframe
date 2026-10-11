@@ -1,0 +1,3 @@
+import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
+export default tseslint.config({ignores:['lib/api.generated.ts','.next/**','out/**']},js.configs.recommended,...tseslint.configs.recommended,{files:['**/*.ts','**/*.tsx'],rules:{'@typescript-eslint/no-unused-vars':['error',{argsIgnorePattern:'^_',varsIgnorePattern:'^_'}]},languageOptions:{globals:{React:'readonly',window:'readonly',document:'readonly',location:'readonly',navigator:'readonly',localStorage:'readonly',confirm:'readonly',prompt:'readonly',fetch:'readonly',setTimeout:'readonly',clearTimeout:'readonly',crypto:'readonly',FormData:'readonly',HTMLFormElement:'readonly',HTMLDialogElement:'readonly',process:'readonly',console:'readonly'}}});

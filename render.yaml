@@ -1,0 +1,21 @@
+# Prepared configuration only. Applying this file requires explicit deployment authorization.
+services:
+  - type: web
+    name: afterframe-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    autoDeploy: false
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: TMDB_READ_ACCESS_TOKEN
+        sync: false
+      - key: API_ORIGINS
+        sync: false

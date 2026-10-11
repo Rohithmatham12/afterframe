@@ -1,0 +1,16 @@
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='afterframe_api') THEN CREATE ROLE afterframe_api NOLOGIN; END IF; END $$;
+GRANT USAGE ON SCHEMA public TO afterframe_api;
+GRANT SELECT,INSERT,UPDATE,DELETE ON profiles,films,viewings,opinions,memories,reviews,reveals,watchlist,lists,list_items,follows,blocks,review_likes,list_likes,comments,notifications,reports,analytics TO afterframe_api;
+GRANT USAGE ON SEQUENCE analytics_id_seq TO afterframe_api;
+CREATE POLICY items_read ON list_items FOR SELECT USING(EXISTS(SELECT 1 FROM lists WHERE id=list_id));
+CREATE POLICY items_write ON list_items FOR ALL USING(EXISTS(SELECT 1 FROM lists WHERE id=list_id AND user_id=viewer_id())) WITH CHECK(EXISTS(SELECT 1 FROM lists WHERE id=list_id AND user_id=viewer_id()));
+CREATE POLICY review_like_read ON review_likes FOR SELECT USING(EXISTS(SELECT 1 FROM reviews WHERE id=review_id));
+CREATE POLICY review_like_write ON review_likes FOR ALL USING(user_id=viewer_id()) WITH CHECK(user_id=viewer_id() AND EXISTS(SELECT 1 FROM reviews WHERE id=review_id));
+CREATE POLICY list_like_read ON list_likes FOR SELECT USING(EXISTS(SELECT 1 FROM lists WHERE id=list_id));
+CREATE POLICY list_like_write ON list_likes FOR ALL USING(user_id=viewer_id()) WITH CHECK(user_id=viewer_id() AND EXISTS(SELECT 1 FROM lists WHERE id=list_id));
+CREATE POLICY comment_read ON comments FOR SELECT USING(profile_visible(user_id) AND EXISTS(SELECT 1 FROM reviews WHERE id=review_id));
+CREATE POLICY comment_write ON comments FOR ALL USING(user_id=viewer_id()) WITH CHECK(user_id=viewer_id() AND EXISTS(SELECT 1 FROM reviews WHERE id=review_id));
+CREATE POLICY notification_create ON notifications FOR INSERT WITH CHECK(actor_id=viewer_id() AND not_blocked(user_id));
+CREATE POLICY notification_update ON notifications FOR UPDATE USING(user_id=viewer_id()) WITH CHECK(user_id=viewer_id());
+CREATE POLICY analytics_owner ON analytics FOR ALL USING(user_id=viewer_id()) WITH CHECK(user_id=viewer_id());
+REVOKE UPDATE ON opinions FROM afterframe_api;
