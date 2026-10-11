@@ -29,6 +29,8 @@ Local GoTrue schema/CORS; duplicate film-title selectors; memory label associati
 - Added search/resurface/separate-rewatch/valid-avatar assertions: PASS, 4 affected journeys — expanded-regression.log and expanded-regression-passed.json.
 - Earlier suites shared one JSON reporter filename; the round 2 and post-catalog results are preserved in their complete text logs. Differently scoped JSON runs were renamed to reflect their actual contents. New runs support REPORT_NAME to avoid overwriting evidence.
 
+- Final complete current suite: PASS, 8 tests — final-complete.json and final-complete.log.
+
 ## Coverage limitations
 The browser scenarios do not yet exhaust every step and adversarial case in the master brief. Hosted email/Google OAuth, production permissions/proxy behavior, performance budgets under load, full analytics, broad competitor validation, discovery completeness, moderation operations and claim-level architecture evidence remain open. A verification skill file's existence/schema validation is not feature completion.
 

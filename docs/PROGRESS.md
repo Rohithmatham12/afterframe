@@ -5,7 +5,7 @@ Local app runs at http://127.0.0.1:3000 with real Go API, PostgreSQL and local S
 
 Completed: foundation UI/API, three differentiators, ownership/RLS, transactions, local account erasure, generated client/sqlc, Compose dependencies, container build, Apple Design/Archify integration, 15 verification skill files, three documented simplification passes.
 
-Verification: unit/race/Testcontainers pass; frontend lint/Vitest/build/audit pass; five-persona desktop round 1 passes, fresh-account round 2 passes; expanded signed-in accessibility/offline test passes. Mobile round 3 passes all eight tests. Social likes/comments/notifications/blocking also pass. Cast/crew metadata and sign-out cleanup added; final eight-test regression passed. Additional search/resurface/rewatch/avatar assertions passed (4 journeys). See docs/testing/TEST_REPORT.md for evidence and limitations.
+Verification: unit/race/Testcontainers pass; frontend lint/Vitest/build/audit pass; five-persona desktop round 1 passes, fresh-account round 2 passes; expanded signed-in accessibility/offline test passes. Mobile round 3 passes all eight tests. Social likes/comments/notifications/blocking also pass. Cast/crew metadata and sign-out cleanup added; final eight-test regression passed. Additional search/resurface/rewatch/avatar assertions passed; final complete current suite passes all 8 tests. See docs/testing/TEST_REPORT.md for evidence and limitations.
 
 ## Resume next
 1. Continue remaining scope listed in docs/testing/VERIFICATION_SKILLS.md.
