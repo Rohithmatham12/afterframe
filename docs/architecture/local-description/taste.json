@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Taste Timeline \u2014 opinions without rewatches",
+    "output": "docs/architecture/local-description/taste.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "reflection",
+      "type": "frontend",
+      "label": "New reflection",
+      "sublabel": "No new viewing required",
+      "pos": [
+        40,
+        70
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "events",
+      "type": "backend",
+      "label": "Go opinion service",
+      "sublabel": "Append or explicit correction",
+      "pos": [
+        420,
+        70
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "history",
+      "type": "database",
+      "label": "Opinion events",
+      "sublabel": "History retained on log delete",
+      "pos": [
+        420,
+        300
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "compare",
+      "type": "backend",
+      "label": "Go comparisons",
+      "sublabel": "Then / now / change",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        190,
+        70
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "reflection-events",
+      "from": "reflection",
+      "to": "events",
+      "label": "New opinion"
+    },
+    {
+      "id": "events-history",
+      "from": "events",
+      "to": "history",
+      "label": "Append-only writes"
+    },
+    {
+      "id": "history-compare",
+      "from": "history",
+      "to": "compare",
+      "label": "History observations"
+    }
+  ],
+  "boundaries": []
+}

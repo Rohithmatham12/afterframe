@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "2ad66d01-1f5e-4c3e-9aff-4e9def99cdbd",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/local-description/spoilers.json",
+  "output": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/local-description/spoilers.html",
+  "specification": {
+    "sha256": "1e440096b1137f672c151053429cd764356f0a5ca1f96eaa920df3eecf95e199",
+    "bytes": 1608
+  },
+  "artifact": {
+    "sha256": "36a82ed50800e5e1f9d10365d800f8e8ff779168a520db56c107424af5562c5e",
+    "bytes": 747978
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "form": [
+    {
+      "path": "frontend/components/forms.tsx",
+      "line": 1
+    }
+  ],
+  "validate": [
+    {
+      "path": "backend/internal/service/service.go",
+      "line": 1
+    }
+  ],
+  "atomic": [
+    {
+      "path": "backend/internal/service/service.go",
+      "line": 1
+    }
+  ],
+  "store": [
+    {
+      "path": "backend/queries/app.sql",
+      "line": 1
+    }
+  ]
+}

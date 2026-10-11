@@ -1,0 +1,26 @@
+{
+  "action": [
+    {
+      "path": "frontend/components/reviews.tsx",
+      "line": 1
+    }
+  ],
+  "service": [
+    {
+      "path": "backend/internal/service/service.go",
+      "line": 1
+    }
+  ],
+  "graph": [
+    {
+      "path": "backend/queries/app.sql",
+      "line": 1
+    }
+  ],
+  "feed": [
+    {
+      "path": "frontend/components/cinema.tsx",
+      "line": 1
+    }
+  ]
+}

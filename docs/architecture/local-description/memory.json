@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Memory Vault \u2014 private non-AI recall",
+    "output": "docs/architecture/local-description/memory.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "capture",
+      "type": "frontend",
+      "label": "Memory anchors",
+      "sublabel": "Scene / feeling / context",
+      "pos": [
+        40,
+        70
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "search",
+      "type": "backend",
+      "label": "Go recall service",
+      "sublabel": "Explicit date phrase parsing",
+      "pos": [
+        420,
+        70
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "index",
+      "type": "database",
+      "label": "PostgreSQL search",
+      "sublabel": "FTS + pg_trgm + owner scope",
+      "pos": [
+        420,
+        300
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "result",
+      "type": "frontend",
+      "label": "Traceable results",
+      "sublabel": "Original text and explanation",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        190,
+        70
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "capture-search",
+      "from": "capture",
+      "to": "search",
+      "label": "Private inputs"
+    },
+    {
+      "id": "search-index",
+      "from": "search",
+      "to": "index",
+      "label": "Scoped query"
+    },
+    {
+      "id": "index-result",
+      "from": "index",
+      "to": "result",
+      "label": "Matching records"
+    }
+  ],
+  "boundaries": []
+}

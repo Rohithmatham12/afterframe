@@ -1,0 +1,8 @@
+
+Running 1 test using 1 worker
+
+(node:52565) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/e2e/journeys.spec.ts:203:5 › E multi-user spoiler-safe discovery: follow, payload non-disclosure and explicit reveal (4.3s)
+
+  1 passed (7.0s)

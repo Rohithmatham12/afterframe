@@ -5331,6 +5331,44 @@
       "Film": {
         "type": "object",
         "properties": {
+          "cast_members": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "role": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "role"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "crew": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "role": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "role"
+              ],
+              "additionalProperties": false
+            }
+          },
           "id": {
             "type": "integer"
           },
@@ -5363,6 +5401,8 @@
           }
         },
         "required": [
+          "cast_members",
+          "crew",
           "id",
           "title",
           "year",

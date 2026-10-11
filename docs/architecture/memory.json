@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Memory Vault \u2014 private non-AI recall",
+    "output": "docs/architecture/memory.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "/Users/rohithmatam/Documents/all/afterframe",
+      "revision": "3cdf4a9961049dc5ce93849a60249e0d67dc8ea3",
+      "link_mode": "local-only"
+    }
+  },
+  "components": [
+    {
+      "id": "capture",
+      "type": "frontend",
+      "label": "Memory anchors",
+      "sublabel": "Scene / feeling / context",
+      "pos": [
+        40,
+        70
+      ],
+      "size": [
+        190,
+        70
+      ],
+      "sources": [
+        {
+          "path": "frontend/components/forms.tsx",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "search",
+      "type": "backend",
+      "label": "Go recall service",
+      "sublabel": "Explicit date phrase parsing",
+      "pos": [
+        420,
+        70
+      ],
+      "size": [
+        190,
+        70
+      ],
+      "sources": [
+        {
+          "path": "backend/internal/memory/query.go",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "index",
+      "type": "database",
+      "label": "PostgreSQL search",
+      "sublabel": "FTS + pg_trgm + owner scope",
+      "pos": [
+        420,
+        300
+      ],
+      "size": [
+        190,
+        70
+      ],
+      "sources": [
+        {
+          "path": "backend/queries/app.sql",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "result",
+      "type": "frontend",
+      "label": "Traceable results",
+      "sublabel": "Original text and explanation",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        190,
+        70
+      ],
+      "sources": [
+        {
+          "path": "frontend/components/library.tsx",
+          "line": 1
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "capture-search",
+      "from": "capture",
+      "to": "search",
+      "label": "Private inputs"
+    },
+    {
+      "id": "search-index",
+      "from": "search",
+      "to": "index",
+      "label": "Scoped query"
+    },
+    {
+      "id": "index-result",
+      "from": "index",
+      "to": "result",
+      "label": "Matching records"
+    }
+  ],
+  "boundaries": []
+}

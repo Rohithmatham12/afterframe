@@ -1,0 +1,26 @@
+{
+  "capture": [
+    {
+      "path": "frontend/components/forms.tsx",
+      "line": 1
+    }
+  ],
+  "search": [
+    {
+      "path": "backend/internal/memory/query.go",
+      "line": 1
+    }
+  ],
+  "index": [
+    {
+      "path": "backend/queries/app.sql",
+      "line": 1
+    }
+  ],
+  "result": [
+    {
+      "path": "frontend/components/library.tsx",
+      "line": 1
+    }
+  ]
+}

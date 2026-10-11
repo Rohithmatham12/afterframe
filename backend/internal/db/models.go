@@ -36,16 +36,18 @@ type DeletedAccount struct {
 }
 
 type Film struct {
-	ID       int64              `json:"id"`
-	Title    string             `json:"title"`
-	Year     string             `json:"year"`
-	Poster   string             `json:"poster"`
-	Backdrop string             `json:"backdrop"`
-	Overview string             `json:"overview"`
-	Genres   []string           `json:"genres"`
-	Director string             `json:"director"`
-	Runtime  int32              `json:"runtime"`
-	CachedAt pgtype.Timestamptz `json:"cached_at"`
+	ID          int64              `json:"id"`
+	Title       string             `json:"title"`
+	Year        string             `json:"year"`
+	Poster      string             `json:"poster"`
+	Backdrop    string             `json:"backdrop"`
+	Overview    string             `json:"overview"`
+	Genres      []string           `json:"genres"`
+	Director    string             `json:"director"`
+	Runtime     int32              `json:"runtime"`
+	CachedAt    pgtype.Timestamptz `json:"cached_at"`
+	CastMembers []byte             `json:"cast_members"`
+	Crew        []byte             `json:"crew"`
 }
 
 type Follow struct {

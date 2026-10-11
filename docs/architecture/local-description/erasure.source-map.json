@@ -1,0 +1,26 @@
+{
+  "confirm": [
+    {
+      "path": "frontend/components/account.tsx",
+      "line": 1
+    }
+  ],
+  "erase": [
+    {
+      "path": "backend/internal/service/account.go",
+      "line": 1
+    }
+  ],
+  "outbox": [
+    {
+      "path": "backend/migrations/000004_erasure_retry.up.sql",
+      "line": 1
+    }
+  ],
+  "provider": [
+    {
+      "path": "backend/internal/auth/admin.go",
+      "line": 1
+    }
+  ]
+}

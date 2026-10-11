@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Spoiler-safe review response",
+    "output": "docs/architecture/local-description/spoilers.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "request",
+      "type": "frontend",
+      "label": "Reader request",
+      "sublabel": "Film detail or following feed",
+      "pos": [
+        40,
+        70
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "viewer",
+      "type": "database",
+      "label": "Viewer state",
+      "sublabel": "Watched + explicit reveals",
+      "pos": [
+        420,
+        70
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "policy",
+      "type": "security",
+      "label": "Go disclosure policy",
+      "sublabel": "Remove forbidden fields",
+      "pos": [
+        420,
+        300
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "safe",
+      "type": "frontend",
+      "label": "Permitted layers only",
+      "sublabel": "No hidden plot in DOM",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        190,
+        70
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "request-viewer",
+      "from": "request",
+      "to": "viewer",
+      "label": "Go-authenticated read"
+    },
+    {
+      "id": "viewer-policy",
+      "from": "viewer",
+      "to": "policy",
+      "label": "Allowed layer"
+    },
+    {
+      "id": "policy-safe",
+      "from": "policy",
+      "to": "safe",
+      "label": "Filtered JSON"
+    }
+  ],
+  "boundaries": []
+}

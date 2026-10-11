@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Social graph and notification flow",
+    "output": "docs/architecture/social.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "/Users/rohithmatam/Documents/all/afterframe",
+      "revision": "3cdf4a9961049dc5ce93849a60249e0d67dc8ea3",
+      "link_mode": "local-only"
+    }
+  },
+  "components": [
+    {
+      "id": "action",
+      "type": "frontend",
+      "label": "Follow / like / comment",
+      "sublabel": "Explicit user action",
+      "pos": [
+        40,
+        70
+      ],
+      "size": [
+        190,
+        70
+      ],
+      "sources": [
+        {
+          "path": "frontend/components/reviews.tsx",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "service",
+      "type": "backend",
+      "label": "Go social service",
+      "sublabel": "Ownership / blocks / visibility",
+      "pos": [
+        420,
+        70
+      ],
+      "size": [
+        190,
+        70
+      ],
+      "sources": [
+        {
+          "path": "backend/internal/service/service.go",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "graph",
+      "type": "database",
+      "label": "Graph and events",
+      "sublabel": "Atomic notification writes",
+      "pos": [
+        420,
+        300
+      ],
+      "size": [
+        190,
+        70
+      ],
+      "sources": [
+        {
+          "path": "backend/queries/app.sql",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "feed",
+      "type": "frontend",
+      "label": "Following feed",
+      "sublabel": "Spoiler-filtered responses",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        190,
+        70
+      ],
+      "sources": [
+        {
+          "path": "frontend/components/cinema.tsx",
+          "line": 1
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "action-service",
+      "from": "action",
+      "to": "service",
+      "label": "Typed mutation"
+    },
+    {
+      "id": "service-graph",
+      "from": "service",
+      "to": "graph",
+      "label": "Transaction"
+    },
+    {
+      "id": "graph-feed",
+      "from": "graph",
+      "to": "feed",
+      "label": "Safe reads"
+    }
+  ],
+  "boundaries": []
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "71a80888-a724-4437-ac2b-b82f4b6ac254",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/local-description/taste.json",
+  "output": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/local-description/taste.html",
+  "specification": {
+    "sha256": "436a9c71f76b52363b3202f3534170bb083b85615534f28eac0aaa24dba9b337",
+    "bytes": 1643
+  },
+  "artifact": {
+    "sha256": "e288bdde5b41ad07abd4a9fb2e2dba68d65f2daa36110deefe7ccdc6d3c2531a",
+    "bytes": 747803
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Authentication and authorization",
+    "output": "docs/architecture/local-description/authentication.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "client",
+      "type": "frontend",
+      "label": "Browser session",
+      "sublabel": "Supabase email / Google",
+      "pos": [
+        40,
+        70
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "verify",
+      "type": "security",
+      "label": "Go validation",
+      "sublabel": "Authoritative Auth /user",
+      "pos": [
+        420,
+        70
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "policy",
+      "type": "security",
+      "label": "Owner context",
+      "sublabel": "Transaction-local role",
+      "pos": [
+        420,
+        300
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "records",
+      "type": "database",
+      "label": "RLS records",
+      "sublabel": "Private rows stay private",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        190,
+        70
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "client-verify",
+      "from": "client",
+      "to": "verify",
+      "label": "Bearer token"
+    },
+    {
+      "id": "verify-policy",
+      "from": "verify",
+      "to": "policy",
+      "label": "Verified user UUID"
+    },
+    {
+      "id": "policy-records",
+      "from": "policy",
+      "to": "records",
+      "label": "SQL policies"
+    }
+  ],
+  "boundaries": []
+}

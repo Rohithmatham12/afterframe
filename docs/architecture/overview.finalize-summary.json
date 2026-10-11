@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "finalize",
+  "status": "fail",
+  "type": "architecture",
+  "quality": "showcase",
+  "specification": {
+    "path": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/overview.json",
+    "sha256": "08f9360eb58755c7acedb003db298f1e3f992489be3076331f6cbf9aa5f95df0",
+    "bytes": 2939
+  },
+  "artifact": {
+    "path": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/overview.html"
+  },
+  "gates": {
+    "validate": "fail",
+    "deliver": "not-run",
+    "check": "not-run",
+    "browser-check": "not-run"
+  },
+  "failedStage": "validate",
+  "diagnostics": [
+    {
+      "code": "repository-evidence/url-invalid",
+      "severity": "error",
+      "message": "/meta/repository/url must be a credential-free HTTP(S) or Git SSH repository address without query, fragment, or dot segments.",
+      "subject": {
+        "surface": "repository-evidence",
+        "path": "/meta/repository/url"
+      },
+      "evidence": {
+        "authoredValueLooksLike": "local filesystem path; the expected value is the remote origin address"
+      },
+      "supportedFixes": [
+        "run `git remote get-url origin` inside --repo-root and declare that credential-free address",
+        "use link_mode: local-only for internal repositories"
+      ]
+    }
+  ],
+  "diagnosticSummary": {
+    "total": 1,
+    "shown": 1,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/overview.finalize.json",
+    "summaryReceipt": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/overview.finalize-summary.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.0.1",
+    "availableVersion": "3.0.1",
+    "releaseNotes": null,
+    "checkedAt": "2026-10-11T04:16:32.442Z",
+    "source": "network",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 199,
+  "nextAction": {
+    "action": "edit-in-place",
+    "candidate": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/overview.json",
+    "constraint": "Preserve all semantics and user-fixed geometry. Use references/architecture-layout-repair.md to choose a local repair or connected-scene reflow; edit the existing candidate.",
+    "then": "finalize-once"
+  }
+}

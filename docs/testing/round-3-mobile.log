@@ -1,0 +1,15 @@
+
+Running 8 tests using 1 worker
+
+(node:51951) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/e2e/journeys.spec.ts:63:5 › A casual viewer: signup, five logs, watchlist, list and returning session (8.7s)
+  ✓  2 tests/e2e/journeys.spec.ts:104:5 › B cinephile: ranked list, reorder, layered review, rewatch and edit (4.1s)
+  ✓  3 tests/e2e/journeys.spec.ts:149:5 › C Memory Vault: keyword, fuzzy recall, edit, ownership and deletion (5.9s)
+  ✓  4 tests/e2e/journeys.spec.ts:182:5 › D Taste Timeline: reflection without rewatch, comparison and persisted history (2.2s)
+  ✓  5 tests/e2e/journeys.spec.ts:203:5 › E multi-user spoiler-safe discovery: follow, payload non-disclosure and explicit reveal (3.0s)
+  ✓  6 tests/e2e/journeys.spec.ts:265:5 › responsive and accessibility audit (3.2s)
+  ✓  7 tests/e2e/journeys.spec.ts:286:5 › account privacy, avatar validation and complete local erasure (3.5s)
+  ✓  8 tests/e2e/journeys.spec.ts:339:5 › authenticated accessibility, navigation and offline fallback (3.2s)
+
+  8 passed (36.9s)

@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Spoiler-safe review response",
+    "output": "docs/architecture/spoilers.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "/Users/rohithmatam/Documents/all/afterframe",
+      "revision": "3cdf4a9961049dc5ce93849a60249e0d67dc8ea3",
+      "link_mode": "local-only"
+    }
+  },
+  "components": [
+    {
+      "id": "request",
+      "type": "frontend",
+      "label": "Reader request",
+      "sublabel": "Film detail or following feed",
+      "pos": [
+        40,
+        70
+      ],
+      "size": [
+        190,
+        70
+      ],
+      "sources": [
+        {
+          "path": "frontend/components/reviews.tsx",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "viewer",
+      "type": "database",
+      "label": "Viewer state",
+      "sublabel": "Watched + explicit reveals",
+      "pos": [
+        420,
+        70
+      ],
+      "size": [
+        190,
+        70
+      ],
+      "sources": [
+        {
+          "path": "backend/queries/app.sql",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "policy",
+      "type": "security",
+      "label": "Go disclosure policy",
+      "sublabel": "Remove forbidden fields",
+      "pos": [
+        420,
+        300
+      ],
+      "size": [
+        190,
+        70
+      ],
+      "sources": [
+        {
+          "path": "backend/internal/spoilers/policy.go",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "safe",
+      "type": "frontend",
+      "label": "Permitted layers only",
+      "sublabel": "No hidden plot in DOM",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        190,
+        70
+      ],
+      "sources": [
+        {
+          "path": "frontend/components/reviews.tsx",
+          "line": 1
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "request-viewer",
+      "from": "request",
+      "to": "viewer",
+      "label": "Go-authenticated read"
+    },
+    {
+      "id": "viewer-policy",
+      "from": "viewer",
+      "to": "policy",
+      "label": "Allowed layer"
+    },
+    {
+      "id": "policy-safe",
+      "from": "policy",
+      "to": "safe",
+      "label": "Filtered JSON"
+    }
+  ],
+  "boundaries": []
+}

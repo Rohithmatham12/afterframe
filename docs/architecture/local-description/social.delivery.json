@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "bfd34a4c-1445-4e9b-bc39-c1435012ad4c",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/local-description/social.json",
+  "output": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/local-description/social.html",
+  "specification": {
+    "sha256": "7870dc44da0300e0d484d62487e04a997467a90c825fa9fe84b8f0617fd6d2b5",
+    "bytes": 1603
+  },
+  "artifact": {
+    "sha256": "bd5cf369facbdc78dc19c5ab9f86ea0a41c25b6bb28dffeda5b3980e1912cc67",
+    "bytes": 747905
+  }
+}

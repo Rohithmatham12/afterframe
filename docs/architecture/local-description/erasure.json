@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Account erasure with durable retry",
+    "output": "docs/architecture/local-description/erasure.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "confirm",
+      "type": "frontend",
+      "label": "Explicit confirmation",
+      "sublabel": "Type DELETE",
+      "pos": [
+        40,
+        70
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "erase",
+      "type": "backend",
+      "label": "Go erasure service",
+      "sublabel": "Delete private data atomically",
+      "pos": [
+        420,
+        70
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "outbox",
+      "type": "database",
+      "label": "Deletion tombstone",
+      "sublabel": "Prevent profile recreation",
+      "pos": [
+        420,
+        300
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "provider",
+      "type": "external",
+      "label": "Supabase admin API",
+      "sublabel": "Bounded one-minute retries",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        190,
+        70
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "confirm-erase",
+      "from": "confirm",
+      "to": "erase",
+      "label": "Authenticated request"
+    },
+    {
+      "id": "erase-outbox",
+      "from": "erase",
+      "to": "outbox",
+      "label": "Commit deletion"
+    },
+    {
+      "id": "outbox-provider",
+      "from": "outbox",
+      "to": "provider",
+      "label": "Retry until erased"
+    }
+  ],
+  "boundaries": []
+}

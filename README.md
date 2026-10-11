@@ -67,3 +67,8 @@ Integration tests create and remove their own PostgreSQL container. Browser test
 ## Status
 
 See `docs/PROGRESS.md` and `docs/testing/TEST_REPORT.md`. The application is not release-ready until every required gate has actually passed.
+
+## Hosted configuration remains blocked
+Set `SUPABASE_URL` in the root `.env` to the full project URL (`https://<project-ref>.supabase.co`). The current value did not pass URL validation. Hosted account deletion also needs server-only `SUPABASE_SECRET_KEY` in that file. Never copy this key into frontend environment variables. Local tests use isolated GoTrue credentials and do not verify Google OAuth.
+
+No public deployment or cloud mutation has run. The Pages workflow only prepares an artifact; Render configuration is unapplied.

@@ -1,0 +1,6 @@
+
+> afterframe-web@0.1.0 generate
+> openapi-typescript ../api/openapi.json -o lib/api.generated.ts
+
+✨ openapi-typescript 7.13.0
+🚀 ../api/openapi.json → lib/api.generated.ts [89.1ms]

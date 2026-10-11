@@ -12,6 +12,7 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -33,27 +34,18 @@ func TestPostgresJourneys(t *testing.T) {
 		t.Fatal(e)
 	}
 	defer pool.Close()
-	sql, e := os.ReadFile("../../migrations/000001_init.up.sql")
+	files, e := filepath.Glob("../../migrations/*.up.sql")
 	if e != nil {
 		t.Fatal(e)
 	}
-	if _, e = pool.Exec(ctx, string(sql)); e != nil {
-		t.Fatal(e)
-	}
-	security, err := os.ReadFile("../../migrations/000002_security.up.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err = pool.Exec(ctx, string(security)); err != nil {
-		t.Fatal(err)
-	}
-	erasure, _ := os.ReadFile("../../migrations/000003_account_erasure.up.sql")
-	if _, err = pool.Exec(ctx, string(erasure)); err != nil {
-		t.Fatal(err)
-	}
-	retry, _ := os.ReadFile("../../migrations/000004_erasure_retry.up.sql")
-	if _, err = pool.Exec(ctx, string(retry)); err != nil {
-		t.Fatal(err)
+	for _, file := range files {
+		data, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err = pool.Exec(ctx, string(data)); err != nil {
+			t.Fatal(file, err)
+		}
 	}
 	s := &Service{Pool: pool, Catalog: catalog.New("")}
 	a, b := uuid.NewString(), uuid.NewString()

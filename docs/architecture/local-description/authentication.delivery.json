@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "fa2a421b-938b-41e1-b97e-921120bc0baa",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/local-description/authentication.json",
+  "output": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/local-description/authentication.html",
+  "specification": {
+    "sha256": "207133c9629a446554bbb36d188915410287535c4cb70ef30b126ba2bf737e9e",
+    "bytes": 1599
+  },
+  "artifact": {
+    "sha256": "d64a781a02bc32c5bfd53f7621c87542c81fabe08ff66d4b9221c275e908f62b",
+    "bytes": 747817
+  }
+}

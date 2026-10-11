@@ -1,0 +1,26 @@
+{
+  "reflection": [
+    {
+      "path": "frontend/components/forms.tsx",
+      "line": 1
+    }
+  ],
+  "events": [
+    {
+      "path": "backend/internal/service/service.go",
+      "line": 1
+    }
+  ],
+  "history": [
+    {
+      "path": "backend/migrations/000001_init.up.sql",
+      "line": 1
+    }
+  ],
+  "compare": [
+    {
+      "path": "backend/internal/taste/insights.go",
+      "line": 1
+    }
+  ]
+}

@@ -8,14 +8,14 @@ export default defineConfig({
   retries: 0,
   reporter: [
     ['list'],
-    ['json', { outputFile: '../docs/testing/playwright-results.json' }],
+    ['json', { outputFile: '../docs/testing/' + (process.env.REPORT_NAME || 'playwright-results') + '.json' }],
     ['html', { outputFolder: '../.local/playwright-report', open: 'never' }],
   ],
   use: {
     baseURL: 'http://127.0.0.1:3000',
     browserName: 'chromium',
     channel: 'chrome',
-    viewport: { width: 1440, height: 1000 },
+    viewport: { width: process.env.MOBILE === '1' ? 390 : 1440, height: 1000 },
     trace: 'off',
     screenshot: 'only-on-failure',
   },

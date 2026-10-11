@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "finalize",
+  "status": "fail",
+  "type": "architecture",
+  "quality": "showcase",
+  "startedAt": "2026-10-11T04:16:32.349Z",
+  "specification": {
+    "path": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/overview.json",
+    "sha256": "08f9360eb58755c7acedb003db298f1e3f992489be3076331f6cbf9aa5f95df0",
+    "bytes": 2939
+  },
+  "artifact": {
+    "path": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/overview.html"
+  },
+  "stages": {
+    "validate": {
+      "status": "fail",
+      "exitCode": 1,
+      "durationMs": null,
+      "command": [
+        "/Users/rohithmatam/.nvm/versions/node/v24.11.1/bin/node",
+        "/Users/rohithmatam/Documents/all/afterframe/.agents/skills/archify/bin/archify.mjs",
+        "deliver",
+        "architecture",
+        "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/overview.json",
+        "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/overview.html",
+        "--quality",
+        "showcase",
+        "--repo-root",
+        "/Users/rohithmatam/Documents/all/afterframe",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": false,
+        "command": "deliver",
+        "receiptId": "96df162d-c89f-4174-b760-a1da79a98c18",
+        "stage": "render",
+        "type": "architecture",
+        "input": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/overview.json",
+        "output": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/overview.html",
+        "error": "/meta/repository/url must be a credential-free HTTP(S) or Git SSH repository address without query, fragment, or dot segments.",
+        "diagnostics": [
+          {
+            "code": "repository-evidence/url-invalid",
+            "severity": "error",
+            "message": "/meta/repository/url must be a credential-free HTTP(S) or Git SSH repository address without query, fragment, or dot segments.",
+            "subject": {
+              "surface": "repository-evidence",
+              "path": "/meta/repository/url"
+            },
+            "evidence": {
+              "authoredValueLooksLike": "local filesystem path; the expected value is the remote origin address"
+            },
+            "supportedFixes": [
+              "run `git remote get-url origin` inside --repo-root and declare that credential-free address",
+              "use link_mode: local-only for internal repositories"
+            ]
+          }
+        ],
+        "provenance": "absent",
+        "update": {
+          "status": "unavailable",
+          "installedVersion": null,
+          "availableVersion": null,
+          "releaseNotes": null,
+          "checkedAt": null,
+          "source": null,
+          "noticeRequired": false,
+          "noticeText": null,
+          "reason": "disabled"
+        }
+      },
+      "execution": "embedded-in-deliver"
+    },
+    "deliver": {
+      "status": "not-run",
+      "execution": "blocked-by-validate"
+    }
+  },
+  "diagnostics": [
+    {
+      "code": "repository-evidence/url-invalid",
+      "severity": "error",
+      "message": "/meta/repository/url must be a credential-free HTTP(S) or Git SSH repository address without query, fragment, or dot segments.",
+      "subject": {
+        "surface": "repository-evidence",
+        "path": "/meta/repository/url"
+      },
+      "evidence": {
+        "authoredValueLooksLike": "local filesystem path; the expected value is the remote origin address"
+      },
+      "supportedFixes": [
+        "run `git remote get-url origin` inside --repo-root and declare that credential-free address",
+        "use link_mode: local-only for internal repositories"
+      ]
+    }
+  ],
+  "evidence": {
+    "receipt": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/overview.finalize.json",
+    "summaryReceipt": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/overview.finalize-summary.json"
+  },
+  "visualReview": "not-requested",
+  "failedStage": "validate",
+  "finishedAt": "2026-10-11T04:16:32.549Z",
+  "durationMs": 199,
+  "update": {
+    "status": "current",
+    "installedVersion": "3.0.1",
+    "availableVersion": "3.0.1",
+    "releaseNotes": null,
+    "checkedAt": "2026-10-11T04:16:32.442Z",
+    "source": "network",
+    "noticeRequired": false,
+    "noticeText": null
+  }
+}

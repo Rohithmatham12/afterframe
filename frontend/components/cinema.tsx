@@ -121,6 +121,9 @@ export default function Cinema() {
         document.getElementById('main')?.focus();
         return;
       }
+      setReviews([]);
+      setFilm(null);
+      setFilmState(null);
       setRoute(location.hash.slice(1) || 'discover');
       setQuery('');
       setSearch('');
@@ -136,6 +139,18 @@ export default function Cinema() {
     });
     const { data } = supabase.auth.onAuthStateChange((event, s) => {
       setToken(s?.access_token || '');
+      if (!s) {
+        setDiary([]);
+        setMemories([]);
+        setResurfaced([]);
+        setOpinions([]);
+        setComparisons([]);
+        setReviews([]);
+        setLists([]);
+        setPeople([]);
+        setNotifications([]);
+        setFilmState(null);
+      }
       setSession(s?.user.id || null);
       setReady(true);
       if (event === 'PASSWORD_RECOVERY') setDialog({ kind: 'password' });
@@ -636,6 +651,21 @@ export default function Cinema() {
                         ))}
                       </div>
                       <p>{film.overview}</p>
+                      <details>
+                        <summary>Cast &amp; crew</summary>
+                        <h2>Cast</h2>
+                        {film.cast_members?.map((c, i) => (
+                          <p key={i}>
+                            <strong>{c.name}</strong> · {c.role}
+                          </p>
+                        ))}
+                        <h2>Crew</h2>
+                        {film.crew?.map((c, i) => (
+                          <p key={i}>
+                            <strong>{c.name}</strong> · {c.role}
+                          </p>
+                        ))}
+                      </details>
                       {session && filmState && (
                         <p className="chip">
                           Your current rating: {filmState.rating ?? 'Unrated'} ·{' '}

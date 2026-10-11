@@ -1,0 +1,26 @@
+{
+  "client": [
+    {
+      "path": "frontend/lib/auth.ts",
+      "line": 1
+    }
+  ],
+  "verify": [
+    {
+      "path": "backend/internal/auth/auth.go",
+      "line": 1
+    }
+  ],
+  "policy": [
+    {
+      "path": "backend/internal/service/service.go",
+      "line": 1
+    }
+  ],
+  "records": [
+    {
+      "path": "backend/migrations/000002_security.up.sql",
+      "line": 1
+    }
+  ]
+}

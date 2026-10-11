@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Atomic film logging and diary",
+    "output": "docs/architecture/local-description/logging.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "form",
+      "type": "frontend",
+      "label": "Log form",
+      "sublabel": "Optional memory capture",
+      "pos": [
+        40,
+        70
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "validate",
+      "type": "backend",
+      "label": "Go validation",
+      "sublabel": "Date / half-star / request ID",
+      "pos": [
+        420,
+        70
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "atomic",
+      "type": "backend",
+      "label": "Save viewing",
+      "sublabel": "Append opinion + memory",
+      "pos": [
+        420,
+        300
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "store",
+      "type": "database",
+      "label": "PostgreSQL commit",
+      "sublabel": "Remove watchlist atomically",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        190,
+        70
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "form-validate",
+      "from": "form",
+      "to": "validate",
+      "label": "Typed request"
+    },
+    {
+      "id": "validate-atomic",
+      "from": "validate",
+      "to": "atomic",
+      "label": "Owner transaction"
+    },
+    {
+      "id": "atomic-store",
+      "from": "atomic",
+      "to": "store",
+      "label": "Commit or rollback"
+    }
+  ],
+  "boundaries": []
+}

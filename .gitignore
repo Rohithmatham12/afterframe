@@ -10,3 +10,4 @@ playwright-report/
 .tools/
 backend/bin/
 frontend/coverage/
+*.tsbuildinfo

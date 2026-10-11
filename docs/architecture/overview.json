@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Afterframe \u2014 runtime and trust boundaries",
+    "output": "docs/architecture/overview.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "/Users/rohithmatam/Documents/all/afterframe",
+      "revision": "3cdf4a9961049dc5ce93849a60249e0d67dc8ea3",
+      "link_mode": "local-only"
+    }
+  },
+  "components": [
+    {
+      "id": "browser",
+      "type": "frontend",
+      "label": "Next.js PWA",
+      "sublabel": "Static React / TypeScript",
+      "pos": [
+        40,
+        290
+      ],
+      "size": [
+        190,
+        70
+      ],
+      "sources": [
+        {
+          "path": "frontend/components/cinema.tsx",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "Go API",
+      "sublabel": "Chi / authorization / services",
+      "pos": [
+        400,
+        290
+      ],
+      "size": [
+        190,
+        70
+      ],
+      "sources": [
+        {
+          "path": "backend/internal/httpapi/api.go",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "database",
+      "type": "database",
+      "label": "PostgreSQL",
+      "sublabel": "sqlc / pgx / RLS / transactions",
+      "pos": [
+        760,
+        290
+      ],
+      "size": [
+        190,
+        70
+      ],
+      "sources": [
+        {
+          "path": "backend/internal/service/service.go",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "auth",
+      "type": "security",
+      "label": "Supabase Auth",
+      "sublabel": "Access token validation",
+      "pos": [
+        400,
+        70
+      ],
+      "size": [
+        190,
+        70
+      ],
+      "sources": [
+        {
+          "path": "backend/internal/auth/auth.go",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "tmdb",
+      "type": "external",
+      "label": "TMDB",
+      "sublabel": "Backend-only read token",
+      "pos": [
+        400,
+        510
+      ],
+      "size": [
+        190,
+        70
+      ],
+      "sources": [
+        {
+          "path": "backend/internal/catalog/catalog.go",
+          "line": 1
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "browser-api",
+      "from": "browser",
+      "to": "api",
+      "label": "Bearer + JSON"
+    },
+    {
+      "id": "api-database",
+      "from": "api",
+      "to": "database",
+      "label": "SQL transactions"
+    },
+    {
+      "id": "api-auth",
+      "from": "api",
+      "to": "auth",
+      "label": "Validate token"
+    },
+    {
+      "id": "api-tmdb",
+      "from": "api",
+      "to": "tmdb",
+      "label": "Movie data"
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "security-group",
+      "label": "Server trust boundary",
+      "wraps": [
+        "api"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Private persistence",
+      "wraps": [
+        "database"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "78ad7aaf-b78e-467a-adda-8bd229c2088a",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/local-description/memory.json",
+  "output": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/local-description/memory.html",
+  "specification": {
+    "sha256": "74a7237a8317a2bd7f743981f1ac545649b15e19fe74cdbf723b619eb41387c9",
+    "bytes": 1622
+  },
+  "artifact": {
+    "sha256": "7519cc1def7499112745e7fffb4c2480bcc62ff0bad149cff0af5224e2b60579",
+    "bytes": 747941
+  }
+}

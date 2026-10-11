@@ -131,6 +131,7 @@ function Review({
         )}
         <div className="review-actions">
           <button
+            aria-label={r.liked ? 'Unlike review' : 'Like review'}
             aria-pressed={r.liked}
             onClick={() =>
               act(async () =>

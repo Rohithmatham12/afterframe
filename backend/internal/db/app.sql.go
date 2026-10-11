@@ -659,7 +659,7 @@ func (q *Queries) UnlikeReview(ctx context.Context, reviewID pgtype.UUID) error 
 }
 
 const upsertFilm = `-- name: UpsertFilm :one
-INSERT INTO films(id,title,year,poster,backdrop,overview,genres,director,runtime) SELECT (d->>'id')::bigint,d->>'title',d->>'year',d->>'poster',d->>'backdrop',d->>'overview',ARRAY(SELECT jsonb_array_elements_text(d->'genres')),d->>'director',(d->>'runtime')::int FROM (SELECT $1::jsonb d) x ON CONFLICT(id) DO UPDATE SET title=excluded.title,year=excluded.year,poster=excluded.poster,backdrop=excluded.backdrop,overview=excluded.overview,genres=excluded.genres,director=excluded.director,runtime=excluded.runtime,cached_at=now() RETURNING to_jsonb(films.*)
+INSERT INTO films(id,title,year,poster,backdrop,overview,genres,director,runtime,cast_members,crew) SELECT (d->>'id')::bigint,d->>'title',d->>'year',d->>'poster',d->>'backdrop',d->>'overview',ARRAY(SELECT jsonb_array_elements_text(d->'genres')),d->>'director',(d->>'runtime')::int,coalesce(nullif(d->'cast_members','null'::jsonb),'[]'::jsonb),coalesce(nullif(d->'crew','null'::jsonb),'[]'::jsonb) FROM (SELECT $1::jsonb d) x ON CONFLICT(id) DO UPDATE SET title=excluded.title,year=excluded.year,poster=excluded.poster,backdrop=excluded.backdrop,overview=excluded.overview,genres=excluded.genres,director=excluded.director,runtime=excluded.runtime,cast_members=excluded.cast_members,crew=excluded.crew,cached_at=now() RETURNING to_jsonb(films.*)
 `
 
 func (q *Queries) UpsertFilm(ctx context.Context, dollar_1 []byte) ([]byte, error) {

@@ -1,35 +1,20 @@
 # Afterframe progress
 
-## Approved decisions
-Go 1.26.4 + Chi modular monolith; Next.js static export + React/TypeScript/Tailwind on GitHub Pages; Supabase PostgreSQL/Auth; pgx/sqlc; OpenAPI client; no paid AI. Prepare Render Free config only. No cloud mutations or public deployment authorized.
+## Current checkpoint
+Local app runs at http://127.0.0.1:3000 with real Go API, PostgreSQL and local Supabase Auth. Docker repaired. Required Go/Node stack used. No cloud infrastructure changed.
 
-## Completed
-- Isolated project created, credentials stored with 0600 permissions and gitignored.
-- All five required variable names populated; TMDB read-only movie request returned HTTP 200.
-- Docker Desktop started; daemon 28.1.1 reachable.
-- Apple Design and Archify installed into repository-local .agents/skills and instructions read. Initial installation paths failed; corrected using upstream repository tree.
+Completed: foundation UI/API, three differentiators, ownership/RLS, transactions, local account erasure, generated client/sqlc, Compose dependencies, container build, Apple Design/Archify integration, 15 verification skill files, three documented simplification passes.
 
-## Current work
-Environment validation, local database/auth infrastructure, API contract and foundation vertical slice.
+Verification: unit/race/Testcontainers pass; frontend lint/Vitest/build/audit pass; five-persona desktop round 1 passes, fresh-account round 2 passes; expanded signed-in accessibility/offline test passes. Mobile round 3 passes all eight tests. Social likes/comments/notifications/blocking also pass. Cast/crew metadata and sign-out cleanup added; final eight-test regression passed. Additional search/resurface/rewatch/avatar assertions passed (4 journeys). See docs/testing/TEST_REPORT.md for evidence and limitations.
 
-## Open failures / risks
-- SUPABASE_URL does not currently parse as an absolute URL; diagnosing without exposing values.
-- Application, tests, audits, and all release gates pending.
-- Render key presence checked only: no Render API calls or cloud changes.
+## Resume next
+1. Continue remaining scope listed in docs/testing/VERIFICATION_SKILLS.md.
+2. Complete missing persona/adversarial coverage, social notifications/blocks and performance audit.
+3. Complete master-brief feature gaps and documentation; do not interpret current test coverage as exhaustive.
+4. Recheck final generated artifacts, release report, source provenance and credential configuration.
 
-## Next
-Complete local Compose environment, create versioned schema, Go API, and static frontend; execute foundation tests.
+## External blockers
+Root .env SUPABASE_URL is malformed; user correction requested without exposing secrets. Hosted account erasure requires SUPABASE_SECRET_KEY. Hosted Google OAuth is unverified. Repository has no remote, blocking Archify repository-backed provenance; eight explicitly labeled local-description diagrams pass automated artifact checks. Public deployment is not authorized.
 
 ## Release
-NOT READY TO PUBLISH. No application tests executed yet.
-
-## Checkpoint: local application running
-- Production static frontend serves at http://127.0.0.1:3000; Go API at port 8080.
-- Local GoTrue CORS/schema issues repaired; real signup/login works.
-- Casual viewer, cinephile, and Memory Vault browser journeys have passed on targeted runs.
-- Go unit, race, and real PostgreSQL Testcontainers checks have passed for the first implementation; subsequent feature additions are undergoing regression.
-- RLS now runs through a transaction-local non-superuser role. Opinion updates are revoked.
-- Profile/network pages, list likes, current rating, server-owned comparisons, validated avatar upload, and durable account-erasure retry are being completed.
-- Initial browser failures preserved; mandatory complete three-round matrix not yet passed.
-- Hosted SUPABASE_URL still invalid; no cloud resources changed. Google OAuth remains unverified.
-- npm audit now reports zero vulnerabilities after replacing the development lint chain.
+NOT READY TO PUBLISH. Keep completed milestones; do not restart discovery.

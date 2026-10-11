@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "command": "deliver",
+  "status": "pending",
+  "receiptId": "96df162d-c89f-4174-b760-a1da79a98c18",
+  "input": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/overview.json",
+  "output": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/overview.html"
+}

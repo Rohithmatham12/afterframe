@@ -11,7 +11,14 @@ import (
 	"time"
 )
 
+type Credit struct {
+	Name string `json:"name"`
+	Role string `json:"role"`
+}
+
 type Film struct {
+	Cast     []Credit `json:"cast_members"`
+	Crew     []Credit `json:"crew"`
 	ID       int64    `json:"id"`
 	Title    string   `json:"title"`
 	Year     string   `json:"year"`
@@ -31,7 +38,10 @@ type movie struct {
 	Overview string                  `json:"overview"`
 	Genres   []struct{ Name string } `json:"genres"`
 	Runtime  int
-	Credits  struct{ Crew []struct{ Name, Job string } }
+	Credits  struct {
+		Cast []struct{ Name, Character string }
+		Crew []struct{ Name, Job string }
+	}
 }
 
 func (m movie) film() Film {
@@ -39,9 +49,15 @@ func (m movie) film() Film {
 	if len(year) > 4 {
 		year = year[:4]
 	}
-	f := Film{ID: m.ID, Title: m.Title, Year: year, Poster: m.Poster, Backdrop: m.Backdrop, Overview: m.Overview, Genres: []string{}, Runtime: m.Runtime}
+	f := Film{Cast: []Credit{}, Crew: []Credit{}, ID: m.ID, Title: m.Title, Year: year, Poster: m.Poster, Backdrop: m.Backdrop, Overview: m.Overview, Genres: []string{}, Runtime: m.Runtime}
 	for _, g := range m.Genres {
 		f.Genres = append(f.Genres, g.Name)
+	}
+	for _, c := range m.Credits.Cast {
+		f.Cast = append(f.Cast, Credit{Name: c.Name, Role: c.Character})
+	}
+	for _, c := range m.Credits.Crew {
+		f.Crew = append(f.Crew, Credit{Name: c.Name, Role: c.Job})
 	}
 	for _, c := range m.Credits.Crew {
 		if c.Job == "Director" {

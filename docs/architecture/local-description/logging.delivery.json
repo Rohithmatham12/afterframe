@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "c11b57f0-e854-4b85-b613-ca58a66f2c48",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/local-description/logging.json",
+  "output": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/local-description/logging.html",
+  "specification": {
+    "sha256": "4c14967cd7b7d02c1dfe2df753c60e6319759e25354826e600aca9014835e2ae",
+    "bytes": 1597
+  },
+  "artifact": {
+    "sha256": "7441393461b3631f6dff913619fe74cca60ca7221d4a9feb1a2a2a53559ae9e0",
+    "bytes": 747681
+  }
+}

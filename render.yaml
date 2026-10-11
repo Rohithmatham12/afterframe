@@ -19,3 +19,5 @@ services:
         sync: false
       - key: API_ORIGINS
         sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false

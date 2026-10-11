@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "d3df354d-2a52-4dd6-ab6f-4acd2c8876d1",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/local-description/erasure.json",
+  "output": "/Users/rohithmatam/Documents/all/afterframe/docs/architecture/local-description/erasure.html",
+  "specification": {
+    "sha256": "90e6b9673eb1ba4211f369f7eec921282d48cb5cc4a8af3ff57ef82584a3d9d6",
+    "bytes": 1628
+  },
+  "artifact": {
+    "sha256": "5034e8c5faa6698a2dffd1882d7ddfe457794904e58c5fc0b177bc9b658d9a8e",
+    "bytes": 748249
+  }
+}

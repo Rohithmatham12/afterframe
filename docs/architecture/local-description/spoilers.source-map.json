@@ -1,0 +1,26 @@
+{
+  "request": [
+    {
+      "path": "frontend/components/reviews.tsx",
+      "line": 1
+    }
+  ],
+  "viewer": [
+    {
+      "path": "backend/queries/app.sql",
+      "line": 1
+    }
+  ],
+  "policy": [
+    {
+      "path": "backend/internal/spoilers/policy.go",
+      "line": 1
+    }
+  ],
+  "safe": [
+    {
+      "path": "frontend/components/reviews.tsx",
+      "line": 1
+    }
+  ]
+}

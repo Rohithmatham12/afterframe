@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 S=lambda **p:{'type':'object','properties':p,'required':list(p),'additionalProperties':False}
 s={'type':'string'};i={'type':'integer'};b={'type':'boolean'};n={'type':'number','nullable':True};arr=lambda x:{'type':'array','items':x};ref=lambda x:{'$ref':'#/components/schemas/'+x}
-film=S(id=i,title=s,year=s,poster=s,backdrop=s,overview=s,genres=arr(s),director=s,runtime=i)
+film=S(cast_members=arr(S(name=s,role=s)),crew=arr(S(name=s,role=s)),id=i,title=s,year=s,poster=s,backdrop=s,overview=s,genres=arr(s),director=s,runtime=i)
 profile=S(id=s,username=s,name=s,bio=s,avatar=s,private=b,resurface=b,created_at=s)
 view=S(id=s,user_id=s,film_id=i,watched_on=s,rating=n,notes=s,rewatch=b,private=b,request_id=s,created_at=s,film=ref('Film'))
 mem=S(id=s,user_id=s,viewing_id=s,scene=s,emotion=s,context=s,updated_at=s,film=ref('Film'),watched_on=s,explanation=s)

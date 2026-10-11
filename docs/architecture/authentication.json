@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Authentication and authorization",
+    "output": "docs/architecture/authentication.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "/Users/rohithmatam/Documents/all/afterframe",
+      "revision": "3cdf4a9961049dc5ce93849a60249e0d67dc8ea3",
+      "link_mode": "local-only"
+    }
+  },
+  "components": [
+    {
+      "id": "client",
+      "type": "frontend",
+      "label": "Browser session",
+      "sublabel": "Supabase email / Google",
+      "pos": [
+        40,
+        70
+      ],
+      "size": [
+        190,
+        70
+      ],
+      "sources": [
+        {
+          "path": "frontend/lib/auth.ts",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "verify",
+      "type": "security",
+      "label": "Go validation",
+      "sublabel": "Authoritative Auth /user",
+      "pos": [
+        420,
+        70
+      ],
+      "size": [
+        190,
+        70
+      ],
+      "sources": [
+        {
+          "path": "backend/internal/auth/auth.go",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "policy",
+      "type": "security",
+      "label": "Owner context",
+      "sublabel": "Transaction-local role",
+      "pos": [
+        420,
+        300
+      ],
+      "size": [
+        190,
+        70
+      ],
+      "sources": [
+        {
+          "path": "backend/internal/service/service.go",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "records",
+      "type": "database",
+      "label": "RLS records",
+      "sublabel": "Private rows stay private",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        190,
+        70
+      ],
+      "sources": [
+        {
+          "path": "backend/migrations/000002_security.up.sql",
+          "line": 1
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "client-verify",
+      "from": "client",
+      "to": "verify",
+      "label": "Bearer token"
+    },
+    {
+      "id": "verify-policy",
+      "from": "verify",
+      "to": "policy",
+      "label": "Verified user UUID"
+    },
+    {
+      "id": "policy-records",
+      "from": "policy",
+      "to": "records",
+      "label": "SQL policies"
+    }
+  ],
+  "boundaries": []
+}

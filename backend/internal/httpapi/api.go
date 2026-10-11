@@ -28,7 +28,7 @@ func Handler(s *service.Service, a *auth.Verifier, origins []string) http.Handle
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(30 * time.Second))
 	r.Use(cors.Handler(cors.Options{AllowedOrigins: origins, AllowedMethods: []string{"GET", "POST", "DELETE", "OPTIONS"}, AllowedHeaders: []string{"Authorization", "Content-Type"}, MaxAge: 300}))
-	r.Use(limits())
+	r.Use(limits(30, 300, func(r *http.Request) string { ip, _, _ := net.SplitHostPort(r.RemoteAddr); return ip }))
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Cache-Control", "no-store")
@@ -66,6 +66,7 @@ func Handler(s *service.Service, a *auth.Verifier, origins []string) http.Handle
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				u, e := a.Verify(r.Context(), r.Header.Get("Authorization"))
 				if e != nil {
+					w.Header().Set("Content-Type", "application/json")
 					w.WriteHeader(401)
 					json.NewEncoder(w).Encode(map[string]string{"error": "Sign in again to continue"})
 					return
@@ -77,6 +78,7 @@ func Handler(s *service.Service, a *auth.Verifier, origins []string) http.Handle
 				next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), userKey{}, u)))
 			})
 		})
+		r.Use(limits(10, 100, User))
 		r.Post("/v1/avatar", func(w http.ResponseWriter, r *http.Request) {
 			r.Body = http.MaxBytesReader(w, r.Body, 256*1024)
 			data, e := io.ReadAll(r.Body)
@@ -90,11 +92,12 @@ func Handler(s *service.Service, a *auth.Verifier, origins []string) http.Handle
 			var in struct {
 				Confirmation string `json:"confirmation"`
 			}
-			if json.NewDecoder(io.LimitReader(r.Body, 1000)).Decode(&in) != nil || in.Confirmation != "DELETE" {
+			if decode(w, r, &in, 1000) != nil || in.Confirmation != "DELETE" {
 				reply(w, nil, service.ErrInvalid)
 				return
 			}
 			if a.AdminKey == "" {
+				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(503)
 				json.NewEncoder(w).Encode(map[string]string{"error": "Account deletion needs server SUPABASE_SECRET_KEY configuration. Your data has not been changed."})
 				return
@@ -117,10 +120,7 @@ func Handler(s *service.Service, a *auth.Verifier, origins []string) http.Handle
 		})
 		r.Post("/v1/{area}", func(w http.ResponseWriter, r *http.Request) {
 			var in service.Input
-			r.Body = http.MaxBytesReader(w, r.Body, 65536)
-			dec := json.NewDecoder(r.Body)
-			dec.DisallowUnknownFields()
-			if e := dec.Decode(&in); e != nil {
+			if e := decode(w, r, &in, 65536); e != nil {
 				reply(w, nil, service.ErrInvalid)
 				return
 			}
@@ -133,6 +133,19 @@ func Handler(s *service.Service, a *auth.Verifier, origins []string) http.Handle
 		})
 	})
 	return r
+}
+
+// decode accepts exactly one JSON value and rejects unknown fields and oversized input.
+func decode(w http.ResponseWriter, r *http.Request, out any, limit int64) error {
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, limit))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(out); err != nil {
+		return err
+	}
+	if err := dec.Decode(new(any)); err != io.EOF {
+		return service.ErrInvalid
+	}
+	return nil
 }
 func reply(w http.ResponseWriter, v any, e error) {
 	w.Header().Set("Content-Type", "application/json")
@@ -160,16 +173,17 @@ func reply(w http.ResponseWriter, v any, e error) {
 	}
 	json.NewEncoder(w).Encode(v)
 }
-func limits() func(http.Handler) http.Handler {
+func limits(perSecond rate.Limit, burst int, key func(*http.Request) string) func(http.Handler) http.Handler {
 	type entry struct {
 		lim  *rate.Limiter
 		last time.Time
 	}
 	var mu sync.Mutex
 	clients := map[string]entry{}
+	overflow := rate.NewLimiter(perSecond, burst)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ip, _, _ := net.SplitHostPort(r.RemoteAddr)
+			ip := key(r)
 			mu.Lock()
 			now := time.Now()
 			if len(clients) > 10000 {
@@ -181,15 +195,23 @@ func limits() func(http.Handler) http.Handler {
 			}
 			e, ok := clients[ip]
 			if !ok {
-				e.lim = rate.NewLimiter(10, 100)
+				if len(clients) >= 10000 {
+					e.lim = overflow
+				} else {
+					e.lim = rate.NewLimiter(perSecond, burst)
+				}
 			}
 			e.last = now
-			clients[ip] = e
+			if ok || len(clients) < 10000 {
+				clients[ip] = e
+			}
 			allowed := e.lim.Allow()
 			mu.Unlock()
 			if !allowed {
 				w.Header().Set("Retry-After", "1")
-				http.Error(w, "Too many requests", 429)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusTooManyRequests)
+				json.NewEncoder(w).Encode(map[string]string{"error": "Too many requests. Try again shortly."})
 				return
 			}
 			next.ServeHTTP(w, r)

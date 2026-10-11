@@ -1,0 +1,24 @@
+{
+  "http://127.0.0.1:3000/": {
+    "samples": 12,
+    "status": 200,
+    "bytes": 15252,
+    "median_ms": 0.4,
+    "max_ms": 25.99
+  },
+  "http://127.0.0.1:8080/health": {
+    "samples": 12,
+    "status": 200,
+    "bytes": 16,
+    "median_ms": 0.8500000000000001,
+    "max_ms": 1.91
+  },
+  "http://127.0.0.1:8080/v1/films/550": {
+    "samples": 12,
+    "status": 200,
+    "bytes": 565,
+    "median_ms": 0.8200000000000001,
+    "max_ms": 1.7
+  },
+  "limitations": "Local sequential warm requests, not network-throttled browser metrics or production load."
+}

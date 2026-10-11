@@ -1,0 +1,32 @@
+{
+  "browser": [
+    {
+      "path": "frontend/components/cinema.tsx",
+      "line": 1
+    }
+  ],
+  "api": [
+    {
+      "path": "backend/internal/httpapi/api.go",
+      "line": 1
+    }
+  ],
+  "database": [
+    {
+      "path": "backend/internal/service/service.go",
+      "line": 1
+    }
+  ],
+  "auth": [
+    {
+      "path": "backend/internal/auth/auth.go",
+      "line": 1
+    }
+  ],
+  "tmdb": [
+    {
+      "path": "backend/internal/catalog/catalog.go",
+      "line": 1
+    }
+  ]
+}
