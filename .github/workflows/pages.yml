@@ -1,8 +1,10 @@
-name: Prepare GitHub Pages artifact
+name: Deploy GitHub Pages
 on:
   workflow_dispatch:
 permissions:
   contents: read
+  pages: write
+  id-token: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -13,6 +15,7 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+      - uses: actions/configure-pages@v5
       - run: npm ci
         working-directory: frontend
       - run: npm run build
@@ -25,4 +28,14 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: frontend/out
-# Deliberately no deploy job. Add only after explicit public deployment approval.
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
+
