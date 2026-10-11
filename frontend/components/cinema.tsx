@@ -848,6 +848,11 @@ export default function Cinema({
                 <Settings
                   key={profile.id}
                   profile={profile}
+                  signOut={async () => {
+                    const { error } = await supabase.auth.signOut();
+                    if (error) throw error;
+                    go('discover');
+                  }}
                   done={() => {
                     refresh();
                     notify('Profile saved');

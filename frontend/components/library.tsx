@@ -335,13 +335,18 @@ export function People({
 export function Settings({
   profile,
   done,
+  signOut,
 }: {
   profile: Models['Profile'];
   done: () => void;
+  signOut: () => Promise<void>;
 }) {
   const [data, setData] = useState(profile);
   return (
     <div className="settings">
+      <MutationForm submit={signOut} done={() => {}} label="Sign out">
+        <p className="muted">Signed in as {profile.name || profile.username}</p>
+      </MutationForm>
       <MutationForm
         submit={async () =>
           result(
