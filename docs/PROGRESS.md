@@ -14,7 +14,7 @@ Verification: unit/race/Testcontainers pass; frontend lint/Vitest/build/audit pa
 4. Recheck final generated artifacts, release report, source provenance and credential configuration.
 
 ## External blockers
-Root .env SUPABASE_URL is malformed; user correction requested without exposing secrets. Hosted account erasure requires SUPABASE_SECRET_KEY. Hosted Google OAuth is unverified. Repository has no remote, blocking Archify repository-backed provenance; eight explicitly labeled local-description diagrams pass automated artifact checks. Public deployment is not authorized.
+Root .env SUPABASE_URL formatting fixed: pasted Markdown link normalized to the correct dashboard URL. Hosted Auth responds HTTP 200; Google provider is enabled. Hosted account erasure requires SUPABASE_SECRET_KEY. Hosted Google OAuth is unverified. Repository has no remote, blocking Archify repository-backed provenance; eight explicitly labeled local-description diagrams pass automated artifact checks. Public deployment is not authorized.
 
 ## Release
 NOT READY TO PUBLISH. Keep completed milestones; do not restart discovery.

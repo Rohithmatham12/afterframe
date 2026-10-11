@@ -35,4 +35,4 @@ Local GoTrue schema/CORS; duplicate film-title selectors; memory label associati
 The browser scenarios do not yet exhaust every step and adversarial case in the master brief. Hosted email/Google OAuth, production permissions/proxy behavior, performance budgets under load, full analytics, broad competitor validation, discovery completeness, moderation operations and claim-level architecture evidence remain open. A verification skill file's existence/schema validation is not feature completion.
 
 ## External setup
-Root .env SUPABASE_URL needs an absolute project URL. Hosted erasure requires SUPABASE_SECRET_KEY. Public deployment requires explicit authorization. No secrets are recorded in evidence.
+Root .env SUPABASE_URL formatting repaired; hosted Auth connectivity now returns HTTP 200 and reports Google enabled. This does not prove a completed OAuth sign-in. Hosted erasure requires SUPABASE_SECRET_KEY. Public deployment requires explicit authorization. No secrets are recorded in evidence.
