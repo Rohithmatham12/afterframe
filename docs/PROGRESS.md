@@ -12,3 +12,6 @@ Preserve completed milestones. Use the verification ledger for outstanding broad
 
 ## Release
 NOT READY TO PUBLISH: current passing checks do not prove all original master-brief gates.
+
+## Public deployment — 2026-10-11
+The user authorized deployment and explicit public source publication. Live website: https://rohithmatham12.github.io/afterframe/; Go API: https://afterframe-api.onrender.com; public repository: https://github.com/Rohithmatham12/afterframe. Hosted migrations, browser-role restrictions and the deployed mobile account/logging/sign-out/erasure journey passed. See docs/DEPLOYMENT.md. Earlier no-deployment/no-remote statements describe previous checkpoints and are superseded; broader release coverage limitations still apply.

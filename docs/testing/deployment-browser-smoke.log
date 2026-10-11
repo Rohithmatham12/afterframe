@@ -1,0 +1,5 @@
+PASS: public frontend sign-in and protected profile through deployed Go API
+PASS: film logging, private memory and diary reload persistence
+PASS: visible Settings sign-out on mobile
+PASS: deployed account erasure removed disposable hosted identity and application data
+PASS: no browser runtime errors

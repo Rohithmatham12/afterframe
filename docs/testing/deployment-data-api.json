@@ -1,0 +1,17 @@
+[
+  {
+    "path": "/rest/v1/films",
+    "status": 401,
+    "denied": true
+  },
+  {
+    "path": "/rest/v1/reviews",
+    "status": 401,
+    "denied": true
+  },
+  {
+    "path": "/rest/v1/deleted_accounts",
+    "status": 401,
+    "denied": true
+  }
+]

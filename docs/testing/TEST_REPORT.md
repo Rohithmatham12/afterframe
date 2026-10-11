@@ -52,3 +52,6 @@ No public deployment or hosted application-database migrations occurred. Public 
 - Final mobile suite: **13 passed** — release-mobile.log/json.
 - Updated Go container build: PASS — release-docker-build.log.
 - Final local Lighthouse mobile: performance 93, accessibility 100, best-practices 100, seo 100, agentic-browsing 100. largest-contentful-paint: 2.7 s, cumulative-layout-shift: 0.01, total-blocking-time: 220 ms. See lighthouse-release.report.json/html. Single local lab run, not field or load metrics.
+
+## Authorized public deployment checkpoint
+The user subsequently authorized deployment and public source publication. GitHub Pages and Render Free are live; hosted migrations and browser access restrictions passed. Public browser smoke verification passed sign-in, protected profile, film logging, private memory request, diary persistence, mobile Settings sign-out and disposable hosted account erasure with zero page errors (deployment-browser-smoke.log). See ../DEPLOYMENT.md for URLs and exact scope. This does not supersede the broader feature/manual/load coverage limitations above.
