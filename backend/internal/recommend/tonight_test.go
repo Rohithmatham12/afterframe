@@ -307,3 +307,29 @@ func TestFamilyModeComposesWithKidsContext(t *testing.T) {
 		t.Fatalf("expected both filters to apply together, got eligible=%d picks=%+v", eligible, picks)
 	}
 }
+
+// A disliked genre still lowers a film's score, but it must never be
+// reported as a taste "match" — that would claim the opposite of what a
+// negative score means. Caught live: a guest who disliked Action still saw
+// "matches your taste in Action" on an Action film.
+func TestDislikedGenreIsNeverReportedAsAMatch(t *testing.T) {
+	taste := Taste{GenreScore: map[string]int{"Action": -1, "Romance": 1}}
+	candidates := []Candidate{{FilmID: 1, Genres: []string{"Action"}, Popularity: 1}}
+	_, reasons := Score(candidates[0], taste, "", "")
+	for _, r := range reasons {
+		if strings.Contains(r, "matches your taste in Action") {
+			t.Fatalf("a disliked genre must never be reported as a match: %+v", reasons)
+		}
+	}
+
+	// The guest reason line must read as real sentences joined together, not
+	// a garbled comma-joined run-on (joinGenres is for genre names, not full
+	// reason sentences).
+	guest := Taste{GenreScore: map[string]int{"Action": -1}}
+	picks, _ := Rank(candidates, Taste{GenreScore: map[string]int{}}, &guest, Constraints{Context: "date_night"}, "", 1)
+	for _, r := range picks[0].Reasons {
+		if strings.Contains(r, "for your guest:") && strings.Contains(r, "matches your taste in Action") {
+			t.Fatalf("guest reason must not claim a disliked genre matches: %+v", picks[0].Reasons)
+		}
+	}
+}

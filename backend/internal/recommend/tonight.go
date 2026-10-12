@@ -5,6 +5,7 @@ package recommend
 
 import (
 	"sort"
+	"strings"
 )
 
 // Candidate is the minimal shape Rank needs from a film; the caller (service
@@ -140,15 +141,18 @@ func FamilySafe(region, certification, policy string) bool {
 func Score(c Candidate, taste Taste, mood, context string) (float64, []string) {
 	score := 0.0
 	var reasons []string
-	var matchedGenres []string
+	var likedGenres []string
 	for _, g := range c.Genres {
-		if v := taste.GenreScore[g]; v != 0 {
-			score += float64(v)
-			matchedGenres = append(matchedGenres, g)
+		// A disliked genre still moves the score (so it ranks lower), but it
+		// must never be reported as a taste "match" — that would claim the
+		// opposite of what the number means.
+		score += float64(taste.GenreScore[g])
+		if taste.GenreScore[g] > 0 {
+			likedGenres = append(likedGenres, g)
 		}
 	}
-	if len(matchedGenres) > 0 {
-		reasons = append(reasons, "matches your taste in "+joinGenres(matchedGenres))
+	if len(likedGenres) > 0 {
+		reasons = append(reasons, "matches your taste in "+joinGenres(likedGenres))
 	}
 	if hasOverlap(c.Genres, contextGenres[context]) {
 		score += contextBonus
@@ -200,7 +204,7 @@ func Rank(candidates []Candidate, taste Taste, guest *Taste, c Constraints, mood
 				if label == "" {
 					label = "your guest"
 				}
-				reasons = append(reasons, "for "+label+": "+joinGenres(gReasons))
+				reasons = append(reasons, "for "+label+": "+strings.Join(gReasons, "; "))
 			}
 			score = combined
 		}
