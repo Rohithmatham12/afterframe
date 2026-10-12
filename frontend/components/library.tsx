@@ -1349,7 +1349,7 @@ export function Diary({
                   );
                   p.refresh();
                 } catch (x) {
-                  p.notify(String(x));
+                  p.notify(message(x));
                 }
               }}
             >
@@ -1398,7 +1398,7 @@ export function Memories({
                   );
                   p.refresh();
                 } catch (x) {
-                  p.notify(String(x));
+                  p.notify(message(x));
                 }
               }}
             >
@@ -1512,7 +1512,7 @@ export function Lists({
                   );
                   p.refresh();
                 } catch (e) {
-                  p.notify(String(e));
+                  p.notify(message(e));
                 }
               }}
             >
@@ -1534,12 +1534,16 @@ export function Lists({
                 <button
                   onClick={async () => {
                     if (confirm('Delete this list?')) {
-                      result(
-                        await api.DELETE('/v1/lists/{id}', {
-                          params: { path: { id: l.id } },
-                        })
-                      );
-                      p.refresh();
+                      try {
+                        result(
+                          await api.DELETE('/v1/lists/{id}', {
+                            params: { path: { id: l.id } },
+                          })
+                        );
+                        p.refresh();
+                      } catch (x) {
+                        p.notify(message(x));
+                      }
                     }
                   }}
                 >
@@ -1592,7 +1596,7 @@ export function People({
                   );
                   p.refresh();
                 } catch (x) {
-                  p.notify(String(x));
+                  p.notify(message(x));
                 }
               }}
             >
@@ -1606,12 +1610,16 @@ export function People({
                     'Block this person? Your content will be hidden from each other.'
                   )
                 ) {
-                  result(
-                    await api.POST('/v1/block', {
-                      body: { target_id: person.id },
-                    })
-                  );
-                  p.refresh();
+                  try {
+                    result(
+                      await api.POST('/v1/block', {
+                        body: { target_id: person.id },
+                      })
+                    );
+                    p.refresh();
+                  } catch (x) {
+                    p.notify(message(x));
+                  }
                 }
               }}
             >
@@ -2183,10 +2191,13 @@ export function Settings({
 function TribePicker() {
   const [tribes, setTribes] = useState<Models['Tribe'][]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState('');
 
   async function load() {
     try {
       setTribes(await result(await api.GET('/v1/tribes')));
+    } catch (e) {
+      setError(message(e));
     } finally {
       setLoaded(true);
     }
@@ -2207,6 +2218,11 @@ function TribePicker() {
         rating against that community&rsquo;s, alongside the global
         average.
       </p>
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
       <div className="row" role="group" aria-label="Tribes">
         {tribes.map((t) => (
           <button
@@ -2215,12 +2231,17 @@ function TribePicker() {
             aria-pressed={t.joined}
             className={t.joined ? 'chip selected' : 'chip'}
             onClick={async () => {
-              await result(
-                await api.POST('/v1/tribes', {
-                  body: { tribe: t.id, enabled: !t.joined },
-                })
-              );
-              load();
+              setError('');
+              try {
+                await result(
+                  await api.POST('/v1/tribes', {
+                    body: { tribe: t.id, enabled: !t.joined },
+                  })
+                );
+                load();
+              } catch (e) {
+                setError(message(e));
+              }
             }}
           >
             {t.label}
@@ -2235,10 +2256,16 @@ function TribePicker() {
 function MutedAccounts() {
   const [muted, setMuted] = useState<Models['Profile'][]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState('');
 
   async function load() {
     try {
       setMuted(await result(await api.GET('/v1/muted')));
+      setError('');
+    } catch (e) {
+      // A failed fetch must not render as "no muted accounts" — that's
+      // indistinguishable from genuinely having none.
+      setError(message(e));
     } finally {
       setLoaded(true);
     }
@@ -2249,6 +2276,16 @@ function MutedAccounts() {
       <button type="button" className="text-button" onClick={load}>
         Show muted accounts
       </button>
+    );
+  }
+  if (error) {
+    return (
+      <p className="error" role="alert">
+        {error}{' '}
+        <button type="button" className="text-button" onClick={load}>
+          Retry
+        </button>
+      </p>
     );
   }
   if (muted.length === 0) {
@@ -2263,12 +2300,16 @@ function MutedAccounts() {
           <button
             className="text-button"
             onClick={async () => {
-              await result(
-                await api.POST('/v1/mute', {
-                  body: { target_id: p.id, enabled: false },
-                })
-              );
-              load();
+              try {
+                await result(
+                  await api.POST('/v1/mute', {
+                    body: { target_id: p.id, enabled: false },
+                  })
+                );
+                load();
+              } catch (e) {
+                setError(message(e));
+              }
             }}
           >
             Unmute

@@ -61,8 +61,10 @@ function Review({
     try {
       await f();
       refresh();
+      return true;
     } catch (e) {
       notify(message(e));
+      return false;
     }
   }
   return (
@@ -240,13 +242,14 @@ function Review({
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
-                await act(async () =>
+                const ok = await act(async () =>
                   result(
                     await api.POST('/v1/comments', {
                       body: { id: r.id, body, layer },
                     })
                   )
                 );
+                if (!ok) return;
                 setBody('');
                 setComments(
                   result(

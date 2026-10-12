@@ -558,7 +558,11 @@ export default function Cinema({
     reviewTone,
   ]);
   function requireAuth(kind: string, value?: unknown) {
-    if (!session) edit('auth');
+    // A signed-out tap on "Log this film"/"Write review"/etc. must not lose
+    // what the visitor was trying to do — remember it so AuthForm's done
+    // callback can reopen the real action instead of always landing on
+    // Settings (which is still correct for a plain, unprompted "Sign in").
+    if (!session) edit('auth', { kind, value });
     else edit(kind, value);
   }
   const props = { refresh, edit, notify };
@@ -1343,8 +1347,14 @@ export default function Cinema({
                 <>
                   <button
                     onClick={async () => {
-                      result(await api.POST('/v1/notifications', { body: {} }));
-                      refresh();
+                      try {
+                        result(
+                          await api.POST('/v1/notifications', { body: {} })
+                        );
+                        refresh();
+                      } catch (e) {
+                        notify(message(e));
+                      }
                     }}
                   >
                     Mark all read
@@ -1387,12 +1397,16 @@ export default function Cinema({
                         <h2>Availability changes</h2>
                         <button
                           onClick={async () => {
-                            result(
-                              await api.POST('/v1/availability-alerts', {
-                                body: {},
-                              })
-                            );
-                            refresh();
+                            try {
+                              result(
+                                await api.POST('/v1/availability-alerts', {
+                                  body: {},
+                                })
+                              );
+                              refresh();
+                            } catch (e) {
+                              notify(message(e));
+                            }
                           }}
                         >
                           Mark all read
@@ -1510,8 +1524,20 @@ export default function Cinema({
           {dialog.kind === 'auth' && (
             <AuthForm
               done={() => {
-                setDialog(null);
-                go('settings');
+                const pending = dialog.value as
+                  | { kind: string; value?: unknown }
+                  | undefined;
+                if (pending?.kind) {
+                  // The visitor came here mid-action (e.g. "Log this
+                  // film") — reopen that, not the generic onboarding
+                  // popup, which would otherwise steal the dialog right
+                  // back from them on this same profile-load tick.
+                  onboardPrompted.current = true;
+                  setDialog({ kind: pending.kind, value: pending.value });
+                } else {
+                  setDialog(null);
+                  go('settings');
+                }
               }}
             />
           )}
