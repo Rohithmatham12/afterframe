@@ -579,9 +579,10 @@ export default function Cinema({
           <span className="brand-period">.</span>
         </a>
         <div className="top-links">
-          <a href="#discover">Films</a>
+          {/* "Discover" and "Lists" already live in the sidebar; only
+              People has no sidebar entry, so it's the one genuinely new
+              destination this bar needs to offer on desktop. */}
           <a href="#people">People</a>
-          <a href="#lists">Lists</a>
         </div>
         <div className="top-actions">
           <details className="mobile-menu">
@@ -658,7 +659,9 @@ export default function Cinema({
               >
                 <Icon size={19} />
                 {label}
-                {key === 'memories' && <span className="new-dot" />}
+                {key === 'memories' && resurfaced.length > 0 && (
+                  <span className="new-dot" />
+                )}
               </a>
             ))}
           </nav>

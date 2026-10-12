@@ -35,9 +35,21 @@ export function Poster({
           <span>{film.title}</span>
         </span>
       )}
+      {/* Only on the full-size card (a Discover/search grid tile) — small
+          posters (reviews, diary, lists) are too tight for this and already
+          carry their own context. vote_count gates it so an uncached or
+          genuinely unrated film shows nothing rather than a fake "0.0". */}
+      {!small && !!film.vote_count && (
+        <span className="poster-rating">
+          ★ {(film.vote_average ?? 0).toFixed(1)}
+        </span>
+      )}
       <span className="poster-caption">
         <strong>{film.title}</strong>
-        <span>{film.year}</span>
+        <span>
+          {film.year}
+          {!small && film.genres[0] ? ' · ' + film.genres[0] : ''}
+        </span>
       </span>
     </button>
   );

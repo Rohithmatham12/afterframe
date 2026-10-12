@@ -144,3 +144,45 @@ func TestDetailHandlesZeroReviewsGracefully(t *testing.T) {
 		t.Fatalf("zero reviews must be an empty slice, not nil or fabricated: %+v", film.TMDBReviews)
 	}
 }
+
+// TMDB's list/discover endpoints send genre_ids, not full genre objects —
+// only the single-movie Detail call returns names. Search must still
+// resolve real genre names so a Discover/search card isn't stuck with an
+// empty genres list just because it came from a list endpoint.
+func TestSearchResolvesGenreNamesFromGenreIDs(t *testing.T) {
+	p := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"results":[{"id":1,"title":"Has Genre IDs","genre_ids":[18,27]}]}`))
+	}))
+	defer p.Close()
+	c := New("server-only")
+	c.Base = p.URL
+	films, err := c.Search(context.Background(), "", "popular", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(films) != 1 {
+		t.Fatalf("expected one film, got %d", len(films))
+	}
+	got := films[0].Genres
+	if len(got) != 2 || got[0] != "Drama" || got[1] != "Horror" {
+		t.Fatalf("expected [Drama Horror] resolved from genre_ids [18 27], got %+v", got)
+	}
+}
+
+// Detail already returns full genre objects; genre_ids must never override
+// or duplicate those real names.
+func TestDetailGenresAreNotOverriddenByGenreIDs(t *testing.T) {
+	p := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"id":1,"title":"Has Both","genres":[{"id":18,"name":"Drama"}],"genre_ids":[27]}`))
+	}))
+	defer p.Close()
+	c := New("server-only")
+	c.Base = p.URL
+	film, err := c.Detail(context.Background(), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(film.Genres) != 1 || film.Genres[0] != "Drama" {
+		t.Fatalf("expected the real genres field to win, got %+v", film.Genres)
+	}
+}

@@ -472,6 +472,18 @@ main {
   transform: translateY(-3px);
   box-shadow: 0 10px 22px #0008;
 }
+.poster-rating {
+  position: absolute;
+  top: 0.4rem;
+  left: 0.4rem;
+  background: #000000b3;
+  color: #fff;
+  font-size: 0.67rem;
+  font-weight: 600;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.3rem;
+  line-height: 1.4;
+}
 .poster-caption {
   display: block;
   padding: 0.6rem 0 0.1rem;

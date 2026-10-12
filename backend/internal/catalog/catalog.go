@@ -61,7 +61,12 @@ type movie struct {
 	Poster           string                  `json:"poster_path"`
 	Backdrop         string                  `json:"backdrop_path"`
 	Overview         string                  `json:"overview"`
-	Genres           []struct{ Name string } `json:"genres"`
+	Genres []struct{ Name string } `json:"genres"`
+	// GenreIDs is what TMDB's list/discover endpoints send instead of full
+	// Genres objects (only the single-movie Detail call returns names). Used
+	// as a fallback in film() so a Discover/search card still gets a real
+	// genre, not an empty list, without an extra per-card TMDB request.
+	GenreIDs         []int `json:"genre_ids"`
 	Runtime          int
 	VoteAverage      float64 `json:"vote_average"`
 	VoteCount        int     `json:"vote_count"`
@@ -135,6 +140,13 @@ func (m movie) film() Film {
 	for _, g := range m.Genres {
 		f.Genres = append(f.Genres, g.Name)
 	}
+	if len(f.Genres) == 0 {
+		for _, id := range m.GenreIDs {
+			if name, ok := genreNameByID[id]; ok {
+				f.Genres = append(f.Genres, name)
+			}
+		}
+	}
 	for _, c := range m.Credits.Cast {
 		f.Cast = append(f.Cast, Credit{Name: c.Name, Role: c.Character})
 	}
@@ -195,6 +207,16 @@ var GenreOrder = []string{
 	"Drama", "Family", "Fantasy", "History", "Horror", "Music", "Mystery",
 	"Romance", "Science Fiction", "Thriller", "War", "Western",
 }
+
+// genreNameByID is GenreID inverted — derived, not hand-duplicated, so the
+// two can never drift out of sync.
+var genreNameByID = func() map[int]string {
+	m := make(map[int]string, len(GenreID))
+	for name, id := range GenreID {
+		m[id] = name
+	}
+	return m
+}()
 
 // SearchByGenre calls TMDB's discover endpoint for popularity-ordered films
 // in a single genre — the targeted counterpart to Search's generic
