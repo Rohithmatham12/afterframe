@@ -174,6 +174,42 @@ func (c *Client) get(ctx context.Context, path string, out any) error {
 	}
 	return json.NewDecoder(res.Body).Decode(out)
 }
+// GenreID is TMDB's official movie genre id for each name in Afterframe's
+// fixed genre vocabulary (frontend/lib/vocab.ts GENRES). Used to pull
+// genre-targeted candidates for Tonight Mode so a stated preference (e.g.
+// Romance) can actually be matched by something in the candidate pool,
+// instead of only drawing from generic popular/trending charts that may
+// contain little or nothing in that genre on a given day.
+var GenreID = map[string]int{
+	"Action": 28, "Adventure": 12, "Animation": 16, "Comedy": 35,
+	"Crime": 80, "Documentary": 99, "Drama": 18, "Family": 10751,
+	"Fantasy": 14, "History": 36, "Horror": 27, "Music": 10402,
+	"Mystery": 9648, "Romance": 10749, "Science Fiction": 878,
+	"Thriller": 53, "War": 10752, "Western": 37,
+}
+
+// GenreOrder is GenreID's keys in a fixed order, so picking a "top liked
+// genre" from a tied score is deterministic rather than map-iteration luck.
+var GenreOrder = []string{
+	"Action", "Adventure", "Animation", "Comedy", "Crime", "Documentary",
+	"Drama", "Family", "Fantasy", "History", "Horror", "Music", "Mystery",
+	"Romance", "Science Fiction", "Thriller", "War", "Western",
+}
+
+// SearchByGenre calls TMDB's discover endpoint for popularity-ordered films
+// in a single genre — the targeted counterpart to Search's generic
+// popular/trending charts.
+func (c *Client) SearchByGenre(ctx context.Context, genreID int, page int) ([]Film, error) {
+	path := "/discover/movie?sort_by=popularity.desc&with_genres=" + strconv.Itoa(genreID) + "&page=" + strconv.Itoa(page)
+	var r struct{ Results []movie }
+	e := c.get(ctx, path, &r)
+	films := []Film{}
+	for _, m := range r.Results {
+		films = append(films, m.film())
+	}
+	return films, e
+}
+
 func (c *Client) Search(ctx context.Context, q, section string, page int) ([]Film, error) {
 	path := "/movie/popular?page=" + strconv.Itoa(page)
 	if section == "trending" {

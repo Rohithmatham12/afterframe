@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"afterframe/internal/recommend"
 )
 
 func TestSpoilerDisclosure(t *testing.T) {
@@ -280,5 +282,21 @@ func TestVisibilityValidation(t *testing.T) {
 		in.Visibility = "friends"
 	})) == nil {
 		t.Fatal("accepted \"friends\" — this app only has one-way follows, must use \"followers\"")
+	}
+}
+
+func TestTopLikedGenresIsOrderedAndExcludesDislikes(t *testing.T) {
+	taste := recommend.Taste{GenreScore: map[string]int{
+		"Romance": 2, "Animation": 1, "Action": -5, "Comedy": 0,
+	}}
+	if got := topLikedGenres(taste, 1); len(got) != 1 || got[0] != "Romance" {
+		t.Fatalf("expected the single strongest liked genre, got %+v", got)
+	}
+	got := topLikedGenres(taste, 5)
+	if len(got) != 2 || got[0] != "Romance" || got[1] != "Animation" {
+		t.Fatalf("expected [Romance Animation] in score order, excluding disliked/neutral genres, got %+v", got)
+	}
+	if len(topLikedGenres(recommend.Taste{GenreScore: map[string]int{"Horror": -1}}, 3)) != 0 {
+		t.Fatal("a taste with no positive genres must return nothing, never a fabricated pick")
 	}
 }

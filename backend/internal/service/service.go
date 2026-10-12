@@ -429,6 +429,31 @@ func tasteMap(ctx context.Context, q *db.Queries) (any, error) {
 // names), reusing the same Film() cache every other page already relies on.
 const tonightCandidateCap = 40
 
+// topLikedGenres returns up to n genre names with a strictly positive score
+// in t, highest first, breaking ties by catalog.GenreOrder so the result is
+// deterministic rather than dependent on map iteration order.
+func topLikedGenres(t recommend.Taste, n int) []string {
+	type scored struct {
+		name  string
+		score int
+	}
+	var liked []scored
+	for _, g := range catalog.GenreOrder {
+		if v := t.GenreScore[g]; v > 0 {
+			liked = append(liked, scored{g, v})
+		}
+	}
+	sort.SliceStable(liked, func(i, j int) bool { return liked[i].score > liked[j].score })
+	if len(liked) > n {
+		liked = liked[:n]
+	}
+	out := make([]string, len(liked))
+	for i, s := range liked {
+		out[i] = s.name
+	}
+	return out
+}
+
 type GuestPreferences struct {
 	LikedGenres    []string `json:"liked_genres"`
 	DislikedGenres []string `json:"disliked_genres"`
@@ -537,6 +562,28 @@ func (s *Service) Tonight(ctx context.Context, user string, req TonightRequest) 
 				if !seen[f.ID] {
 					seen[f.ID] = true
 					ids = append(ids, f.ID)
+				}
+			}
+		}
+		// A stated preference (own taste or guest) must be matchable by
+		// something real, not just hoped for among whatever's generically
+		// popular that week — popular/trending charts can genuinely contain
+		// zero films in a given genre on a given day. Pull genre-targeted
+		// candidates for the top liked genre(s) first, before the cap below
+		// can crowd them out with blockbuster chart noise.
+		for _, g := range topLikedGenres(recommend.Taste{GenreScore: genreScore}, 1) {
+			if id, ok := catalog.GenreID[g]; ok {
+				if gf, e := s.Catalog.SearchByGenre(ctx, id, 1); e == nil {
+					addIDs(gf)
+				}
+			}
+		}
+		if guestTaste != nil {
+			for _, g := range topLikedGenres(*guestTaste, 2) {
+				if id, ok := catalog.GenreID[g]; ok {
+					if gf, e := s.Catalog.SearchByGenre(ctx, id, 1); e == nil {
+						addIDs(gf)
+					}
 				}
 			}
 		}
