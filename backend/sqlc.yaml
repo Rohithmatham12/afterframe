@@ -10,6 +10,19 @@ sql:
       - migrations/000005_film_credits.up.sql
       - migrations/000006_read_indexes.up.sql
       - migrations/000007_film_cards.up.sql
+      - migrations/000009_username_availability.up.sql
+      - migrations/000010_feelings_and_watchlist_intent.up.sql
+      - migrations/000011_tone_and_context.up.sql
+      - migrations/000012_streaming_availability.up.sql
+      - migrations/000013_taste_quiz.up.sql
+      - migrations/000014_taste_sharing.up.sql
+      - migrations/000015_mutes.up.sql
+      - migrations/000016_abandonment_tracking.up.sql
+      - migrations/000017_craft_mode.up.sql
+      - migrations/000018_family_mode.up.sql
+      - migrations/000019_theatrical_plans.up.sql
+      - migrations/000020_tribes.up.sql
+      - migrations/000021_tmdb_votes_reviews.up.sql
     gen:
       go:
         package: db

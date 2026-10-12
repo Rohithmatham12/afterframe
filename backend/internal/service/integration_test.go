@@ -90,6 +90,317 @@ func TestPostgresJourneys(t *testing.T) {
 			t.Fatal("duplicate opinion")
 		}
 	})
+	t.Run("Global vs tribe taste: suppression, duplicate-rating protection, and membership exclusion", func(t *testing.T) {
+		// Fresh users, not the shared a/b — later subtests assert *absolute*
+		// counts of a's total viewings across all films, so adding viewings
+		// for a/b here would break them.
+		ta, tb, tc, td := uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString()
+		for _, u := range []string{ta, tb, tc, td} {
+			if e := s.Ensure(ctx, u); e != nil {
+				t.Fatal(e)
+			}
+		}
+		if _, e := db.New(pool).UpsertFilm(ctx, pack(catalog.Film{ID: 13, Title: "Forrest Gump", Year: "1994", Genres: []string{"Drama"}})); e != nil {
+			t.Fatal(e)
+		}
+		rate := func(user string, r float64, reqID string) {
+			rating := r
+			if _, e := s.Write(ctx, user, "diary", Input{FilmID: 13, WatchedOn: "2024-01-01", Rating: &rating, RequestID: reqID}); e != nil {
+				t.Fatal(e)
+			}
+		}
+		// ta rates it, then rewatches and re-rates lower — only the latest
+		// should ever count, proving a user can't inflate the average by
+		// submitting duplicate ratings.
+		rate(ta, 5.0, uuid.NewString())
+		rate(ta, 1.0, uuid.NewString())
+		rate(tb, 5.0, uuid.NewString())
+		rate(tc, 5.0, uuid.NewString())
+		rate(td, 5.0, uuid.NewString())
+
+		global, e := s.FilmRatings(ctx, ta, 13, "")
+		if e != nil {
+			t.Fatal(e)
+		}
+		var g struct {
+			Global struct {
+				Score      *float64 `json:"score"`
+				SampleSize int      `json:"sample_size"`
+				Source     string   `json:"source"`
+			} `json:"global"`
+		}
+		json.Unmarshal(global, &g)
+		if g.Global.SampleSize != 4 {
+			t.Fatalf("expected 4 raters (one each), got %d — a duplicate rating was counted twice", g.Global.SampleSize)
+		}
+		if g.Global.Score == nil || *g.Global.Score != 4.0 {
+			t.Fatalf("expected avg(1,5,5,5)=4.0 using only a's latest rating, got %v", g.Global.Score)
+		}
+		if g.Global.Source != "afterframe_community" {
+			t.Fatalf("global rating needs a clear source label, got %q", g.Global.Source)
+		}
+
+		// Only a and c join the tribe: below the minimum sample, the tribe
+		// score must be suppressed (nil) even though a real average could
+		// technically be computed — sample size still visible.
+		if _, e = s.SetTribe(ctx, ta, "horror_enthusiasts", true); e != nil {
+			t.Fatal(e)
+		}
+		if _, e = s.SetTribe(ctx, tc, "horror_enthusiasts", true); e != nil {
+			t.Fatal(e)
+		}
+		sparse, e := s.FilmRatings(ctx, ta, 13, "horror_enthusiasts")
+		if e != nil {
+			t.Fatal(e)
+		}
+		var sp struct {
+			Tribe struct {
+				Score      *float64 `json:"score"`
+				SampleSize int      `json:"sample_size"`
+			} `json:"tribe"`
+		}
+		json.Unmarshal(sparse, &sp)
+		if sp.Tribe.Score != nil {
+			t.Fatalf("a 2-rater tribe sample should be suppressed, not fabricated: %v", *sp.Tribe.Score)
+		}
+		if sp.Tribe.SampleSize != 2 {
+			t.Fatalf("sample size must stay visible even when the score is suppressed, got %d", sp.Tribe.SampleSize)
+		}
+
+		// d also joins: now at the minimum sample, with a real (and
+		// different-from-global) average — b's 5.0 correctly excluded
+		// since b never joined.
+		if _, e = s.SetTribe(ctx, td, "horror_enthusiasts", true); e != nil {
+			t.Fatal(e)
+		}
+		full, e := s.FilmRatings(ctx, ta, 13, "horror_enthusiasts")
+		if e != nil {
+			t.Fatal(e)
+		}
+		var fl struct {
+			Tribe struct {
+				Score      *float64 `json:"score"`
+				SampleSize int      `json:"sample_size"`
+				Source     string   `json:"source"`
+			} `json:"tribe"`
+		}
+		json.Unmarshal(full, &fl)
+		if fl.Tribe.SampleSize != 3 {
+			t.Fatalf("expected 3 tribe raters (a, c, d — not b), got %d", fl.Tribe.SampleSize)
+		}
+		wantAvg := (1.0 + 5.0 + 5.0) / 3.0
+		if fl.Tribe.Score == nil || *fl.Tribe.Score < wantAvg-0.001 || *fl.Tribe.Score > wantAvg+0.001 {
+			t.Fatalf("expected tribe avg %.4f excluding b's rating, got %v", wantAvg, fl.Tribe.Score)
+		}
+		if fl.Tribe.Source != "Horror enthusiasts" {
+			t.Fatalf("tribe rating needs a clear source label, got %q", fl.Tribe.Source)
+		}
+
+		// Unrecognized tribe IDs are rejected, not silently accepted.
+		if _, e = s.SetTribe(ctx, ta, "made_up_tribe", true); e == nil {
+			t.Fatal("accepted a tribe outside the fixed, documented list")
+		}
+		if _, e = s.FilmRatings(ctx, ta, 13, "made_up_tribe"); e == nil {
+			t.Fatal("computed a rating for an undocumented tribe")
+		}
+
+		// b never joined, so leaving an un-joined tribe is a harmless no-op,
+		// not an error — matches this codebase's existing mute/follow pattern.
+		if _, e = s.SetTribe(ctx, tb, "horror_enthusiasts", false); e != nil {
+			t.Fatal(e)
+		}
+	})
+	t.Run("Craft Mode spoiler gating, privacy, and search", func(t *testing.T) {
+		// A dedicated film, not 550 — the later "Spoiler Safe" subtest relies
+		// on b's reveal layer for 550 starting unrevealed, and craft notes
+		// share the exact same `reveals`/viewed-it auto-unlock mechanism, so
+		// reusing 550 here would leak state between the two subtests.
+		if _, e := db.New(pool).UpsertFilm(ctx, pack(catalog.Film{ID: 603, Title: "The Matrix", Year: "1999", Genres: []string{"Science Fiction"}})); e != nil {
+			t.Fatal(e)
+		}
+		pubSpoiler, e := s.Write(ctx, a, "craft", Input{
+			FilmID: 603, Category: "scene_reference",
+			Scene: "The twist in the final act", Body: "It was him all along.",
+			Spoiler: true, Private: false,
+		})
+		if e != nil {
+			t.Fatal(e)
+		}
+		privateNote, e := s.Write(ctx, a, "craft", Input{
+			FilmID: 603, Category: "cinematography",
+			Scene: "Lighting in the apartment", Body: "Hard sidelight throughout.",
+			Spoiler: false, Private: true,
+		})
+		if e != nil {
+			t.Fatal(e)
+		}
+
+		// b hasn't watched 603 and hasn't revealed: sees the public spoiler
+		// note exists, but not its scene/body; never sees the private note.
+		before, e := s.Read(ctx, b, "craft", Filter{FilmID: 603})
+		if e != nil {
+			t.Fatal(e)
+		}
+		var notes []map[string]any
+		json.Unmarshal(before, &notes)
+		if len(notes) != 1 {
+			t.Fatalf("private note leaked, or public note missing: got %d notes", len(notes))
+		}
+		if _, ok := notes[0]["body"]; ok {
+			t.Fatal("spoiler body visible to a viewer who hasn't watched or revealed")
+		}
+		if notes[0]["allowed_spoiler"] != false {
+			t.Fatal("allowed_spoiler should be false before watching or revealing")
+		}
+
+		// Once b has actually watched the film, the same automatic layer-2
+		// reveal reviews already grant applies here too.
+		if _, e = s.Write(ctx, b, "diary", Input{FilmID: 603, WatchedOn: "2024-11-01", RequestID: uuid.NewString()}); e != nil {
+			t.Fatal(e)
+		}
+		after, e := s.Read(ctx, b, "craft", Filter{FilmID: 603})
+		if e != nil {
+			t.Fatal(e)
+		}
+		var afterNotes []map[string]any
+		json.Unmarshal(after, &afterNotes)
+		if afterNotes[0]["body"] != "It was him all along." {
+			t.Fatalf("spoiler body should unlock after watching: got %v", afterNotes[0]["body"])
+		}
+
+		// a's own search finds the note by its scene text, spoiler or private
+		// status notwithstanding — it's always visible to its owner.
+		found, e := s.Read(ctx, a, "craft", Filter{Query: "sidelight"})
+		if e != nil {
+			t.Fatal(e)
+		}
+		var ownNotes []map[string]any
+		json.Unmarshal(found, &ownNotes)
+		if len(ownNotes) != 1 || ownNotes[0]["body"] != "Hard sidelight throughout." {
+			t.Fatalf("owner's search over their own craft notes failed: %v", ownNotes)
+		}
+
+		if _, e = s.Delete(ctx, a, "craft", object(pubSpoiler)["id"].(string)); e != nil {
+			t.Fatal(e)
+		}
+		if _, e = s.Delete(ctx, a, "craft", object(privateNote)["id"].(string)); e != nil {
+			t.Fatal(e)
+		}
+	})
+	t.Run("Theatrical planning: invites, voting, group permissions, and decision", func(t *testing.T) {
+		stranger := uuid.NewString()
+		if e := s.Ensure(ctx, stranger); e != nil {
+			t.Fatal(e)
+		}
+		planJSON, e := s.CreatePlan(ctx, a, 550, "Opening night?")
+		if e != nil {
+			t.Fatal(e)
+		}
+		planID := object(planJSON)["id"].(string)
+
+		slot1JSON, e := s.AddPlanSlot(ctx, a, planID, "Friday 7pm")
+		if e != nil {
+			t.Fatal(e)
+		}
+		slot1 := object(slot1JSON)["id"].(string)
+		if _, e = s.AddPlanSlot(ctx, a, planID, "Saturday 2pm"); e != nil {
+			t.Fatal(e)
+		}
+
+		// A non-creator can't add slots — group permissions work.
+		if _, e = s.AddPlanSlot(ctx, b, planID, "Sunday noon"); e == nil {
+			t.Fatal("a non-creator added a slot")
+		}
+
+		// A stranger who was never invited can't see the plan at all.
+		if _, e = s.PlanDetail(ctx, stranger, planID); e == nil {
+			t.Fatal("an uninvited stranger could read a private plan")
+		}
+
+		if _, e = s.InvitePlanParticipant(ctx, a, planID, "b-does-not-exist-as-a-username"); e == nil {
+			t.Fatal("invited a nonexistent username")
+		}
+
+		// b hasn't joined yet: a vote attempt is silently rejected by RLS
+		// (no row inserted), not an error — mirrors how the rest of this
+		// codebase treats a denied write as "nothing happened."
+		if _, e = s.VotePlanSlot(ctx, b, slot1, true); e != nil {
+			t.Fatal(e)
+		}
+		before, e := s.PlanDetail(ctx, a, planID)
+		if e != nil {
+			t.Fatal(e)
+		}
+		var beforeDetail struct {
+			Slots []map[string]any `json:"slots"`
+		}
+		json.Unmarshal(before, &beforeDetail)
+		if beforeDetail.Slots[0]["votes"].(float64) != 0 {
+			t.Fatalf("a non-participant's vote should not count: %+v", beforeDetail.Slots[0])
+		}
+
+		// Find b's real username to invite properly, then respond and vote.
+		meB, e := s.Read(ctx, b, "me", Filter{})
+		if e != nil {
+			t.Fatal(e)
+		}
+		bUsername := object(meB)["username"].(string)
+		if _, e = s.InvitePlanParticipant(ctx, a, planID, bUsername); e != nil {
+			t.Fatal(e)
+		}
+		if _, e = s.RespondPlanInvite(ctx, b, planID, true); e != nil {
+			t.Fatal(e)
+		}
+		if _, e = s.VotePlanSlot(ctx, b, slot1, true); e != nil {
+			t.Fatal(e)
+		}
+		if _, e = s.VotePlanSlot(ctx, a, slot1, true); e != nil {
+			t.Fatal(e) // the creator is auto-joined and can vote on their own plan
+		}
+
+		after, e := s.PlanDetail(ctx, b, planID)
+		if e != nil {
+			t.Fatal(e)
+		}
+		var afterDetail struct {
+			Slots []map[string]any `json:"slots"`
+		}
+		json.Unmarshal(after, &afterDetail)
+		if afterDetail.Slots[0]["votes"].(float64) != 2 || afterDetail.Slots[0]["voted"] != true {
+			t.Fatalf("expected 2 votes on slot 1, voted=true for b: %+v", afterDetail.Slots[0])
+		}
+
+		// Only the creator can decide — group permissions work both ways.
+		if _, e = s.DecidePlan(ctx, b, planID, slot1, false); e == nil {
+			t.Fatal("a non-creator decided the plan")
+		}
+		decided, e := s.DecidePlan(ctx, a, planID, slot1, false)
+		if e != nil {
+			t.Fatal(e)
+		}
+		d := object(decided)
+		if d["status"] != "decided" || d["decided_slot_id"] != slot1 {
+			t.Fatalf("plan change not persisted correctly: %+v", d)
+		}
+
+		// The stranger still can't see it even after a decision is made.
+		if _, e = s.PlanDetail(ctx, stranger, planID); e == nil {
+			t.Fatal("an uninvited stranger could read a decided plan")
+		}
+
+		// A separate plan can be cancelled outright.
+		plan2JSON, e := s.CreatePlan(ctx, a, 550, "Or maybe not")
+		if e != nil {
+			t.Fatal(e)
+		}
+		cancelled, e := s.DecidePlan(ctx, a, object(plan2JSON)["id"].(string), "", true)
+		if e != nil {
+			t.Fatal(e)
+		}
+		if object(cancelled)["status"] != "cancelled" {
+			t.Fatalf("cancellation not persisted: %+v", object(cancelled))
+		}
+	})
 	t.Run("Memory Vault ownership keyword fuzzy update delete", func(t *testing.T) {
 		m, e := s.Read(ctx, a, "memories", Filter{Query: "neon"})
 		if e != nil {

@@ -2,7 +2,13 @@
 import { useState, type FormEvent } from 'react';
 import { api, result, type Models } from '@/lib/api';
 import { supabase } from '@/lib/auth';
-import { Rating, message } from './ui';
+import { Rating, go, message } from './ui';
+import {
+  FEELINGS,
+  VIEWING_CONTEXTS,
+  REVIEW_TONES,
+  CRAFT_CATEGORIES,
+} from '@/lib/vocab';
 type Mutation = Models['Mutation'];
 export function AuthForm({ done }: { done: () => void }) {
   const [mode, setMode] = useState('login');
@@ -129,6 +135,8 @@ export function LogForm({
     scene: '',
     emotion: '',
     context: '',
+    feelings: entry?.feelings || [],
+    viewing_context: entry?.context || '',
   });
   return (
     <MutationForm
@@ -156,13 +164,56 @@ export function LogForm({
         />
       </div>
       <label>
+        Who was this for? <small>optional</small>
+        <select
+          value={data.viewing_context}
+          onChange={(e) =>
+            setData({ ...data, viewing_context: e.target.value })
+          }
+        >
+          {VIEWING_CONTEXTS.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
         Diary notes
         <textarea
           value={data.notes}
           onChange={(e) => setData({ ...data, notes: e.target.value })}
-          placeholder="How did it leave you feeling?"
+          placeholder="Anything you want to remember about this watch"
         />
       </label>
+      <div>
+        <span className="muted">
+          How did it leave you feeling? <small>optional</small>
+        </span>
+        <div className="row" role="group" aria-label="Feelings">
+          {FEELINGS.map((feeling) => {
+            const selected = (data.feelings || []).includes(feeling);
+            return (
+              <button
+                type="button"
+                key={feeling}
+                aria-pressed={selected}
+                className={selected ? 'chip selected' : 'chip'}
+                onClick={() =>
+                  setData({
+                    ...data,
+                    feelings: selected
+                      ? (data.feelings || []).filter((f) => f !== feeling)
+                      : [...(data.feelings || []), feeling],
+                  })
+                }
+              >
+                {feeling}
+              </button>
+            );
+          })}
+        </div>
+      </div>
       <div className="row">
         <label className="check">
           <input
@@ -218,11 +269,13 @@ export function MutationForm({
   submit,
   done,
   label = 'Save',
+  disabled = false,
 }: {
   children: React.ReactNode;
   submit: () => Promise<unknown>;
   done: () => void;
   label?: string;
+  disabled?: boolean;
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState('');
@@ -231,7 +284,7 @@ export function MutationForm({
       className="stack"
       onSubmit={async (e) => {
         e.preventDefault();
-        if (busy) return;
+        if (busy || disabled) return;
         setBusy(true);
         setError('');
         try {
@@ -250,7 +303,7 @@ export function MutationForm({
           {error}
         </p>
       )}
-      <button className="primary" disabled={busy}>
+      <button className="primary" disabled={busy || disabled}>
         {busy ? 'Saving…' : label}
       </button>
     </form>
@@ -271,6 +324,7 @@ export function ReviewForm({
     safe: review?.safe || '',
     watched: review?.watched || '',
     reflection: review?.reflection || '',
+    tone: review?.tone || '',
   });
   return (
     <MutationForm
@@ -305,6 +359,20 @@ export function ReviewForm({
           value={data.reflection}
           onChange={(e) => setData({ ...data, reflection: e.target.value })}
         />
+      </label>
+      <label>
+        How would you describe this review? <small>optional</small>
+        <select
+          value={data.tone}
+          onChange={(e) => setData({ ...data, tone: e.target.value })}
+        >
+          {REVIEW_TONES.filter((t) => t.value !== '').map((t) => (
+            <option key={t.value} value={t.value}>
+              {t.label}
+            </option>
+          ))}
+          <option value="">Not specified</option>
+        </select>
       </label>
     </MutationForm>
   );
@@ -385,6 +453,119 @@ export function MemoryForm({
         <textarea
           value={data.context}
           onChange={(e) => setData({ ...data, context: e.target.value })}
+        />
+      </label>
+    </MutationForm>
+  );
+}
+export function CraftNoteForm({
+  film,
+  note,
+  done,
+}: {
+  film: Models['Film'];
+  note?: Models['CraftNote'];
+  done: () => void;
+}) {
+  const [data, setData] = useState<Mutation>({
+    id: note?.id,
+    film_id: film.id,
+    category: note?.category || '',
+    scene: note?.scene || '',
+    body: note?.body || '',
+    spoiler: note?.spoiler || false,
+    private: note ? note.private : true,
+  });
+  return (
+    <MutationForm
+      submit={async () => result(await api.POST('/v1/craft', { body: data }))}
+      done={done}
+      label="Save note"
+      disabled={!data.category}
+    >
+      <p>{film.title}</p>
+      <label>
+        Category
+        <select
+          value={data.category}
+          onChange={(e) => setData({ ...data, category: e.target.value })}
+        >
+          <option value="" disabled>
+            Choose one…
+          </option>
+          {CRAFT_CATEGORIES.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Scene (optional)
+        <input
+          value={data.scene}
+          onChange={(e) => setData({ ...data, scene: e.target.value })}
+          placeholder="e.g. the hallway fight, 00:42"
+        />
+      </label>
+      <label>
+        Observation
+        <textarea
+          value={data.body}
+          onChange={(e) => setData({ ...data, body: e.target.value })}
+          placeholder="What stood out — the choice, the technique, why it works…"
+        />
+      </label>
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={data.spoiler}
+          onChange={(e) => setData({ ...data, spoiler: e.target.checked })}
+        />
+        This note contains spoilers
+      </label>
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={data.private}
+          onChange={(e) => setData({ ...data, private: e.target.checked })}
+        />
+        Private (only visible to you)
+      </label>
+    </MutationForm>
+  );
+}
+// GAP 23: creating a plan always goes straight to its detail page, where
+// the "no live showtimes" notice and manual-slots flow live.
+export function CreatePlanForm({
+  film,
+  done,
+}: {
+  film: Models['Film'];
+  done: () => void;
+}) {
+  const [note, setNote] = useState('');
+  return (
+    <MutationForm
+      submit={async () => {
+        const plan = await result(
+          await api.POST('/v1/theatrical-plans', {
+            body: { film_id: film.id, note },
+          })
+        );
+        go('plan/' + plan.id);
+        return plan;
+      }}
+      done={done}
+      label="Create plan"
+    >
+      <p>{film.title}</p>
+      <label>
+        Note (optional)
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Who's in, what night works, anything else to add…"
         />
       </label>
     </MutationForm>

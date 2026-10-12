@@ -1,7 +1,8 @@
 'use client';
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { X, Film } from 'lucide-react';
-import type { Models } from '@/lib/api';
+import { api, result, type Models } from '@/lib/api';
+import { normalizeUsername, usernameFormatError } from '@/lib/username';
 export function go(route: string) {
   window.location.hash = route;
 }
@@ -153,3 +154,100 @@ export function Rating({
 }
 export const message = (e: unknown) =>
   e instanceof Error ? e.message : 'Something went wrong. Please retry.';
+
+// Live, server-authoritative username input shared by onboarding and account
+// settings. Never relies on the browser's native `pattern` validation bubble
+// ("Please match the requested format"), which cannot explain *why* input failed.
+export function UsernameField({
+  value,
+  onChange,
+  startingUsername,
+  canSubmit,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  startingUsername?: string;
+  canSubmit?: (ok: boolean) => void;
+}) {
+  const [status, setStatus] = useState<'idle' | 'checking' | 'available' | 'blocked'>(
+    'idle'
+  );
+  const [note, setNote] = useState('');
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const normalized = normalizeUsername(value);
+  const formatError = usernameFormatError(value);
+  useEffect(() => {
+    canSubmit?.(!formatError && status !== 'blocked' && status !== 'checking');
+  }, [formatError, status, canSubmit]);
+  useEffect(() => {
+    if (formatError) {
+      setStatus('idle');
+      setNote(formatError);
+      setSuggestions([]);
+      return;
+    }
+    if (startingUsername && normalized === normalizeUsername(startingUsername)) {
+      setStatus('idle');
+      setNote('');
+      setSuggestions([]);
+      return;
+    }
+    let live = true;
+    setStatus('checking');
+    setNote('Checking availability…');
+    const t = setTimeout(async () => {
+      try {
+        const r = result(
+          await api.GET('/v1/username-available', {
+            params: { query: { u: normalized } },
+          })
+        );
+        if (!live) return;
+        setStatus(r.available ? 'available' : 'blocked');
+        setNote(r.available ? 'Available.' : r.reason || 'That username is taken.');
+        setSuggestions(r.suggestions || []);
+      } catch {
+        if (live) setStatus('idle');
+      }
+    }, 400);
+    return () => {
+      live = false;
+      clearTimeout(t);
+    };
+    // startingUsername intentionally excluded: it never changes after mount, so
+    // including it would only add a needless re-run condition.
+  }, [normalized, formatError]);
+  return (
+    <div className="stack">
+      <label>
+        Username
+        <input
+          aria-describedby="username-hint username-status"
+          aria-invalid={status === 'blocked' || !!formatError}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      </label>
+      <p className="muted" id="username-hint">
+        3-30 characters: lowercase letters, numbers, and underscores. Shown as @
+        {normalized || 'yourname'}.
+      </p>
+      <p
+        className={status === 'blocked' || formatError ? 'error' : 'muted'}
+        role="status"
+        id="username-status"
+      >
+        {note}
+      </p>
+      {suggestions.length > 0 && (
+        <div className="row">
+          {suggestions.map((s) => (
+            <button type="button" key={s} onClick={() => onChange(s)}>
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

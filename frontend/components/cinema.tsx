@@ -1,14 +1,17 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowUpRight,
   Bell,
   Bookmark,
+  CalendarDays,
+  Clapperboard,
   Compass,
   Film,
   History,
   List,
   LockKeyhole,
+  Moon,
   Plus,
   Search,
   Settings as SettingsIcon,
@@ -30,19 +33,63 @@ const Lists = dynamic(() => import('./library').then((m) => m.Lists));
 const Memories = dynamic(() => import('./library').then((m) => m.Memories));
 const People = dynamic(() => import('./library').then((m) => m.People));
 const Settings = dynamic(() => import('./library').then((m) => m.Settings));
+const Onboarding = dynamic(() =>
+  import('./library').then((m) => m.Onboarding)
+);
 const Timeline = dynamic(() => import('./library').then((m) => m.Timeline));
+const TasteQuiz = dynamic(() =>
+  import('./library').then((m) => m.TasteQuiz)
+);
+const TonightMode = dynamic(() =>
+  import('./library').then((m) => m.TonightMode)
+);
+const TastePartners = dynamic(() =>
+  import('./library').then((m) => m.TastePartners)
+);
+const ProgressTracker = dynamic(() =>
+  import('./library').then((m) => m.ProgressTracker)
+);
+const PosterShare = dynamic(() =>
+  import('./library').then((m) => m.PosterShare)
+);
+const CraftNotes = dynamic(() =>
+  import('./library').then((m) => m.CraftNotes)
+);
+const CraftNoteForm = dynamic(() =>
+  import('./forms').then((m) => m.CraftNoteForm)
+);
+const CreatePlanForm = dynamic(() =>
+  import('./forms').then((m) => m.CreatePlanForm)
+);
+const TheatricalPlans = dynamic(() =>
+  import('./library').then((m) => m.TheatricalPlans)
+);
+const PlanDetail = dynamic(() =>
+  import('./library').then((m) => m.PlanDetail)
+);
+const FilmRatings = dynamic(() =>
+  import('./library').then((m) => m.FilmRatings)
+);
+const LetterboxdImport = dynamic(() =>
+  import('./library').then((m) => m.LetterboxdImport)
+);
 const Reviews = dynamic(() => import('./reviews').then((m) => m.Reviews));
 const ProfileView = dynamic(() => import('./profile'));
 import { Empty, Modal, Poster, go, message } from './ui';
+import { isPlaceholderUsername, suggestUsernameFrom } from '@/lib/username';
+import { WATCHLIST_INTENTS, REVIEW_TONES, REGIONS } from '@/lib/vocab';
 type Dialog = { kind: string; value?: unknown } | null;
 const navigation = [
   ['discover', 'Discover', Compass],
+  ['tonight', 'Tonight', Moon],
   ['diary', 'Your diary', Film],
   ['watchlist', 'Watchlist', Bookmark],
   ['lists', 'Lists', List],
   ['feed', 'Following', Users],
   ['memories', 'Memory Vault', Vault],
   ['timeline', 'Taste Timeline', History],
+  ['craft', 'Craft notes', Clapperboard],
+  ['plans', 'Group plans', CalendarDays],
 ] as const;
 const titles: Record<string, [string, string]> = {
   discover: [
@@ -79,7 +126,134 @@ const titles: Record<string, [string, string]> = {
     'Make yourself at home.',
     'Your profile, your privacy, your preferences.',
   ],
+  quiz: ['Let’s find your kind of cinema.', 'About a minute. Fully optional.'],
+  tonight: [
+    'What do you feel like tonight?',
+    'A few picks, explained — not an endless scroll.',
+  ],
+  'taste-partners': [
+    'Share taste, not just activity.',
+    'Nothing crosses over until they say yes.',
+  ],
+  import: [
+    'Bring your history with you.',
+    'Your Letterboxd diary, matched and merged — never duplicated.',
+  ],
+  craft: [
+    'For the people who notice the edit.',
+    'Cinematography, sound, performance — entirely optional, always searchable.',
+  ],
+  plans: [
+    'Movie night starts with a plan.',
+    'Propose times, invite people, vote. No live showtimes — honestly so.',
+  ],
 };
+// Reads only trustworthy, user-provided profile metadata Google/Supabase already
+// hands back on sign-in. Used solely to prefill onboarding; never applied silently.
+function notificationText(kind: string): string {
+  switch (kind) {
+    case 'follow':
+      return 'started following you';
+    case 'review_like':
+      return 'liked your review';
+    case 'taste_share_invite':
+      return 'wants to share taste for Tonight Mode';
+    case 'taste_share_accepted':
+      return 'accepted your taste-sharing request';
+    case 'taste_share_declined':
+      return 'declined your taste-sharing request';
+    case 'plan_invite':
+      return 'invited you to plan a group outing';
+    default:
+      return 'joined your discussion';
+  }
+}
+function suggestionFrom(
+  user: { email?: string; user_metadata?: Record<string, unknown> } | null | undefined
+) {
+  const meta = user?.user_metadata || {};
+  const name =
+    typeof meta.full_name === 'string'
+      ? meta.full_name
+      : typeof meta.name === 'string'
+        ? meta.name
+        : '';
+  return { username: suggestUsernameFrom(name || user?.email?.split('@')[0] || ''), name };
+}
+// GAP 24 (free-tier only): current region streaming availability, sourced
+// from TMDB's watch/providers endpoint (itself JustWatch data). Never shows
+// a predicted departure date — only an observed snapshot and its freshness.
+function StreamingAvailability({ filmId }: { filmId: number }) {
+  const [region, setRegion] = useState('US');
+  const [data, setData] = useState<Models['StreamingAvailability'] | null>(
+    null
+  );
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let live = true;
+    setData(null);
+    setError('');
+    api
+      .GET('/v1/availability', { params: { query: { film_id: filmId, region } } })
+      .then(result)
+      .then((d) => {
+        if (live) setData(d);
+      })
+      .catch((e) => {
+        if (live) setError(message(e));
+      });
+    return () => {
+      live = false;
+    };
+  }, [filmId, region]);
+  return (
+    <div className="availability">
+      <div className="row">
+        <span className="muted">Where to watch</span>
+        <select
+          aria-label="Region"
+          value={region}
+          onChange={(e) => setRegion(e.target.value)}
+        >
+          {REGIONS.map((r) => (
+            <option key={r.value} value={r.value}>
+              {r.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      {error && (
+        <p className="muted" role="status">
+          {error}
+        </p>
+      )}
+      {data && (
+        <>
+          {data.providers.length ? (
+            <div className="row">
+              {data.providers.map((p) => (
+                <span className="chip" key={p}>
+                  {p}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="muted">No streaming listing found for this region.</p>
+          )}
+          <p className="muted">
+            {data.stale ? 'Last confirmed' : 'Checked'}{' '}
+            {new Date(data.fetched_at).toLocaleDateString()}. Streaming data
+            by{' '}
+            <a href="https://www.justwatch.com" target="_blank" rel="noreferrer">
+              JustWatch
+            </a>
+            .
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
 export default function Cinema({
   initialFilms = [],
 }: {
@@ -98,7 +272,11 @@ export default function Cinema({
     [search, setSearch] = useState(''),
     [section, setSection] = useState('popular'),
     [page, setPage] = useState(1),
-    [month, setMonth] = useState('');
+    [month, setMonth] = useState(''),
+    [watchlistIntent, setWatchlistIntent] = useState(''),
+    [reviewTone, setReviewTone] = useState(''),
+    [suggested, setSuggested] = useState({ username: '', name: '' });
+  const onboardPrompted = useRef(false);
   const [films, setFilms] = useState<Models['Film'][]>(initialFilms),
     [film, setFilm] = useState<Models['Film'] | null>(null),
     [diary, setDiary] = useState<Models['Viewing'][]>([]),
@@ -107,9 +285,15 @@ export default function Cinema({
     [opinions, setOpinions] = useState<Models['Opinion'][]>([]),
     [comparisons, setComparisons] = useState<Models['Comparison'][]>([]),
     [filmState, setFilmState] = useState<Models['FilmState'] | null>(null),
+    [progress, setProgress] = useState<Models['Progress'][]>([]),
+    [craftNotes, setCraftNotes] = useState<Models['CraftNote'][]>([]),
     [reviews, setReviews] = useState<Models['Review'][]>([]),
     [lists, setLists] = useState<Models['List'][]>([]),
     [people, setPeople] = useState<Models['Person'][]>([]),
+    [watchlistItems, setWatchlistItems] = useState<Models['Watch'][]>([]),
+    [availabilityAlerts, setAvailabilityAlerts] = useState<
+      Models['AvailabilityAlert'][]
+    >([]),
     [notifications, setNotifications] = useState<Models['Notification'][]>([]);
   const area = route.split('/')[0],
     routeID = route.split('/')[1];
@@ -132,6 +316,8 @@ export default function Cinema({
       setReviews([]);
       setFilm(null);
       setFilmState(null);
+      setProgress([]);
+      setCraftNotes([]);
       setRoute(location.hash.slice(1) || 'discover');
       setQuery('');
       setSearch('');
@@ -143,10 +329,12 @@ export default function Cinema({
     supabase.auth.getSession().then(({ data }) => {
       setToken(data.session?.access_token || '');
       setSession(data.session?.user.id || null);
+      setSuggested(suggestionFrom(data.session?.user));
       setReady(true);
     });
     const { data } = supabase.auth.onAuthStateChange((event, s) => {
       setToken(s?.access_token || '');
+      setSuggested(suggestionFrom(s?.user));
       if (!s) {
         setDiary([]);
         setMemories([]);
@@ -158,6 +346,8 @@ export default function Cinema({
         setPeople([]);
         setNotifications([]);
         setFilmState(null);
+        setProgress([]);
+        setCraftNotes([]);
       }
       setSession(s?.user.id || null);
       setReady(true);
@@ -182,7 +372,22 @@ export default function Cinema({
       api
         .GET('/v1/me')
         .then(result)
-        .then(setProfile)
+        .then((p) => {
+          setProfile(p);
+          // A fresh sign-up/sign-in already redirects to #settings, which shows
+          // its own placeholder-username notice inline; only pop the onboarding
+          // modal for a *returning* session landing somewhere else, so the two
+          // username prompts never stack on top of each other.
+          if (
+            !onboardPrompted.current &&
+            isPlaceholderUsername(p.username) &&
+            location.hash.slice(1) !== 'settings' &&
+            sessionStorage.getItem('af_onboarding_dismissed') !== '1'
+          ) {
+            onboardPrompted.current = true;
+            setDialog({ kind: 'onboarding' });
+          }
+        })
         .catch((e) => setError(message(e)));
     else setProfile(null);
   }, [session, revision]);
@@ -205,7 +410,7 @@ export default function Cinema({
         );
         if (live) setFilm(data);
         if (session) {
-          const [r, t, c, state] = await Promise.all([
+          const [r, t, c, state, prog, craft] = await Promise.all([
             api.GET('/v1/reviews', {
               params: { query: { film_id: Number(routeID) } },
             }),
@@ -218,12 +423,18 @@ export default function Cinema({
             api.GET('/v1/film-state', {
               params: { query: { film_id: Number(routeID) } },
             }),
+            api.GET('/v1/progress'),
+            api.GET('/v1/craft', {
+              params: { query: { film_id: Number(routeID) } },
+            }),
           ]);
           if (live) {
             setReviews(result(r));
             setOpinions(result(t));
             setComparisons(result(c));
             setFilmState(result(state));
+            setProgress(result(prog));
+            setCraftNotes(result(craft));
           }
         }
       } else if (session) {
@@ -240,10 +451,12 @@ export default function Cinema({
           case 'watchlist': {
             const d = result(
               await api.GET('/v1/watchlist', {
-                params: { query: { offset: (page - 1) * 50 } },
+                params: {
+                  query: { offset: (page - 1) * 50, emotion: watchlistIntent },
+                },
               })
             );
-            if (live) setFilms(d.map((x) => x.film));
+            if (live) setWatchlistItems(d);
             break;
           }
           case 'memories': {
@@ -268,6 +481,13 @@ export default function Cinema({
             }
             break;
           }
+          case 'craft': {
+            const d = result(
+              await api.GET('/v1/craft', { params: { query: { q: search } } })
+            );
+            if (live) setCraftNotes(d);
+            break;
+          }
           case 'lists': {
             const d = result(
               await api.GET('/v1/lists', {
@@ -285,7 +505,9 @@ export default function Cinema({
           case 'feed': {
             const d = result(
               await api.GET('/v1/feed', {
-                params: { query: { offset: (page - 1) * 30 } },
+                params: {
+                  query: { offset: (page - 1) * 30, emotion: reviewTone },
+                },
               })
             );
             if (live) setReviews(d);
@@ -299,8 +521,14 @@ export default function Cinema({
             break;
           }
           case 'notifications': {
-            const d = result(await api.GET('/v1/notifications'));
-            if (live) setNotifications(d);
+            const [d, a] = await Promise.all([
+              api.GET('/v1/notifications'),
+              api.GET('/v1/availability-alerts'),
+            ]);
+            if (live) {
+              setNotifications(result(d));
+              setAvailabilityAlerts(result(a));
+            }
             break;
           }
         }
@@ -316,7 +544,19 @@ export default function Cinema({
     return () => {
       live = false;
     };
-  }, [area, routeID, session, ready, revision, search, section, page, month]);
+  }, [
+    area,
+    routeID,
+    session,
+    ready,
+    revision,
+    search,
+    section,
+    page,
+    month,
+    watchlistIntent,
+    reviewTone,
+  ]);
   function requireAuth(kind: string, value?: unknown) {
     if (!session) edit('auth');
     else edit(kind, value);
@@ -408,7 +648,7 @@ export default function Cinema({
               <a
                 key={key}
                 className={
-                  (area === key ? 'active ' : '') + (i === 5 ? 'nav-break' : '')
+                  (area === key ? 'active ' : '') + (i === 6 ? 'nav-break' : '')
                 }
                 href={'#' + key}
               >
@@ -460,6 +700,25 @@ export default function Cinema({
                   MADE PERSONAL
                 </span>
               </div>
+              {session &&
+                profile &&
+                !profile.quiz_completed_at &&
+                sessionStorage.getItem('af_quiz_dismissed') !== '1' && (
+                  <p className="notice">
+                    Take the 60-second taste quiz so Discover can start
+                    reflecting what you actually like.{' '}
+                    <button onClick={() => go('quiz')}>Take the quiz</button>{' '}
+                    <button
+                      className="text-button"
+                      onClick={() => {
+                        sessionStorage.setItem('af_quiz_dismissed', '1');
+                        refresh();
+                      }}
+                    >
+                      Not now
+                    </button>
+                  </p>
+                )}
               {!search && films[0] && (
                 <section className="hero">
                   {films[0].backdrop && (
@@ -528,7 +787,7 @@ export default function Cinema({
             </div>
           ) : (
             <>
-              {['discover', 'memories', 'people'].includes(area) && (
+              {['discover', 'memories', 'people', 'craft'].includes(area) && (
                 <div className="toolbar">
                   {area === 'discover' && (
                     <div
@@ -561,7 +820,9 @@ export default function Cinema({
                         ? 'Search your memories'
                         : area === 'people'
                           ? 'Search people'
-                          : 'Search films'}
+                          : area === 'craft'
+                            ? 'Search your craft notes'
+                            : 'Search films'}
                     </span>
                     <input
                       value={query}
@@ -574,7 +835,9 @@ export default function Cinema({
                           ? 'A feeling, a scene, a half-remembered night…'
                           : area === 'people'
                             ? 'Find a film person…'
-                            : 'Find a film…'
+                            : area === 'craft'
+                              ? 'A technique, a scene, a film title…'
+                              : 'Find a film…'
                       }
                     />
                   </label>
@@ -591,21 +854,65 @@ export default function Cinema({
                   Finding your next frame…
                 </p>
               )}
-              {(area === 'discover' || area === 'watchlist') && !loading && (
+              {area === 'discover' && !loading && (
                 <>
                   {films.length ? (
                     <div className="film-grid">
                       {films.map((f) => (
                         <div key={f.id}>
                           <Poster film={f} />
-                          {area === 'watchlist' && (
-                            <button
-                              className="text-button"
-                              onClick={async () => {
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    !error && (
+                      <Empty
+                        title={search ? 'No films found' : 'Nothing here yet'}
+                      />
+                    )
+                  )}
+                </>
+              )}
+              {area === 'watchlist' && !loading && (
+                <>
+                  <div className="row" role="group" aria-label="Filter by reason saved">
+                    {WATCHLIST_INTENTS.map((i) => (
+                      <button
+                        type="button"
+                        key={i.value}
+                        aria-pressed={watchlistIntent === i.value}
+                        className={
+                          watchlistIntent === i.value ? 'chip selected' : 'chip'
+                        }
+                        onClick={() => {
+                          setWatchlistIntent(i.value);
+                          setPage(1);
+                        }}
+                      >
+                        {i.value === '' ? 'All' : i.label}
+                      </button>
+                    ))}
+                  </div>
+                  {watchlistItems.length ? (
+                    <div className="film-grid">
+                      {watchlistItems.map((w) => (
+                        <div key={w.film.id}>
+                          <Poster film={w.film} />
+                          <label>
+                            Saved for
+                            <select
+                              value={w.intent}
+                              onChange={async (e) => {
                                 try {
                                   result(
                                     await api.POST('/v1/watchlist', {
-                                      body: { film_id: f.id, enabled: false },
+                                      body: {
+                                        film_id: w.film.id,
+                                        enabled: true,
+                                        private: w.private,
+                                        intent: e.target.value,
+                                        intent_note: w.intent_note,
+                                      },
                                     })
                                   );
                                   refresh();
@@ -614,9 +921,30 @@ export default function Cinema({
                                 }
                               }}
                             >
-                              Remove
-                            </button>
-                          )}
+                              {WATCHLIST_INTENTS.map((i) => (
+                                <option key={i.value} value={i.value}>
+                                  {i.label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <button
+                            className="text-button"
+                            onClick={async () => {
+                              try {
+                                result(
+                                  await api.POST('/v1/watchlist', {
+                                    body: { film_id: w.film.id, enabled: false },
+                                  })
+                                );
+                                refresh();
+                              } catch (e) {
+                                notify(message(e));
+                              }
+                            }}
+                          >
+                            Remove
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -624,9 +952,9 @@ export default function Cinema({
                     !error && (
                       <Empty
                         title={
-                          search
-                            ? 'No films found'
-                            : 'A few good films for later'
+                          watchlistIntent
+                            ? 'Nothing saved for that reason yet'
+                            : 'Save films for the right moment'
                         }
                       />
                     )
@@ -673,8 +1001,42 @@ export default function Cinema({
                             {g}
                           </span>
                         ))}
+                        {!!film.vote_count && (
+                          <span className="chip tmdb-source">
+                            TMDB rating: {(film.vote_average ?? 0).toFixed(1)}/10 (
+                            {film.vote_count.toLocaleString()} votes)
+                          </span>
+                        )}
                       </div>
                       <p>{film.overview}</p>
+                      {!!film.tmdb_reviews?.length && (
+                        <details>
+                          <summary>
+                            TMDB community reviews ({film.tmdb_reviews.length}
+                            )
+                          </summary>
+                          <p className="muted tmdb-source">
+                            These are reviews TMDB&rsquo;s own community
+                            wrote — not Afterframe users. See
+                            Afterframe&rsquo;s own reviews further down this
+                            page.
+                          </p>
+                          {film.tmdb_reviews.map((r, i) => (
+                            <article key={i} className="tmdb-review">
+                              <span className="eyebrow">
+                                TMDB community review · {r.author}
+                                {r.rating != null && ` · ${r.rating}/10`}
+                              </span>
+                              <p className="review-text">{r.content}</p>
+                              {r.url && (
+                                <a href={r.url} target="_blank" rel="noreferrer">
+                                  Read on TMDB
+                                </a>
+                              )}
+                            </article>
+                          ))}
+                        </details>
+                      )}
                       <details>
                         <summary>Cast &amp; crew</summary>
                         <h2>Cast</h2>
@@ -695,6 +1057,14 @@ export default function Cinema({
                           Your current rating: {filmState.rating ?? 'Unrated'} ·{' '}
                           {filmState.viewings} viewings
                         </p>
+                      )}
+                      {session && <FilmRatings filmID={film.id} />}
+                      {session && (
+                        <ProgressTracker
+                          film={film}
+                          current={progress.find((p) => p.film_id === film.id)}
+                          onSaved={refresh}
+                        />
                       )}
                       <div className="row">
                         <button
@@ -735,9 +1105,32 @@ export default function Cinema({
                         <button onClick={() => requireAuth('opinion', film)}>
                           Reflect
                         </button>
+                        <button onClick={() => requireAuth('plan', film)}>
+                          Plan a group outing
+                        </button>
                       </div>
+                      {session && <StreamingAvailability filmId={film.id} />}
                     </div>
                   </section>
+                  {session && (
+                    <>
+                      <div className="section-heading">
+                        <h2>Craft notes</h2>
+                        <button onClick={() => edit('craft', { film })}>
+                          Add craft note
+                        </button>
+                      </div>
+                      <CraftNotes
+                        notes={craftNotes}
+                        refresh={refresh}
+                        notify={notify}
+                        userID={session}
+                        edit={(n) =>
+                          edit('craft', { film: n.film || film, note: n })
+                        }
+                      />
+                    </>
+                  )}
                   <div className="section-heading">
                     <h2>A little perspective</h2>
                     <span className="chip safe">
@@ -753,6 +1146,7 @@ export default function Cinema({
                         notify={notify}
                         userID={session}
                         edit={(r) => edit('review', r)}
+                        share={(r) => edit('poster', r)}
                       />
                       {opinions.length > 0 && (
                         <>
@@ -823,6 +1217,25 @@ export default function Cinema({
               {area === 'lists' && (
                 <Lists lists={lists} userID={session || undefined} {...props} />
               )}
+              {area === 'plans' && <TheatricalPlans />}
+              {area === 'plan' && (
+                <PlanDetail
+                  planID={routeID}
+                  userID={session || undefined}
+                  notify={notify}
+                />
+              )}
+              {area === 'craft' && (
+                <CraftNotes
+                  notes={craftNotes}
+                  refresh={refresh}
+                  notify={notify}
+                  userID={session || undefined}
+                  edit={(n) =>
+                    n.film && edit('craft', { film: n.film, note: n })
+                  }
+                />
+              )}
               {area === 'people' && <People people={people} {...props} />}
               {area === 'feed' && (
                 <>
@@ -832,18 +1245,73 @@ export default function Cinema({
                       Find people <ArrowUpRight size={16} />
                     </button>
                   </div>
+                  <div className="row" role="group" aria-label="Filter reviews">
+                    {REVIEW_TONES.map((t) => (
+                      <button
+                        type="button"
+                        key={t.value}
+                        aria-pressed={reviewTone === t.value}
+                        className={
+                          reviewTone === t.value ? 'chip selected' : 'chip'
+                        }
+                        onClick={() => {
+                          setReviewTone(t.value);
+                          setPage(1);
+                        }}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
                   <Reviews
                     reviews={reviews}
                     refresh={refresh}
                     notify={notify}
                     userID={session || undefined}
                     edit={(r) => edit('review', r)}
+                    share={(r) => edit('poster', r)}
                   />
                 </>
               )}
               {area === 'profile' && (
                 <ProfileView key={routeID} id={routeID} notify={notify} />
               )}
+              {area === 'quiz' &&
+                (session ? (
+                  <TasteQuiz done={() => go('discover')} onSaved={refresh} />
+                ) : (
+                  <p className="muted">
+                    <button onClick={() => edit('auth')}>Sign in</button> to
+                    take the taste quiz.
+                  </p>
+                ))}
+              {area === 'tonight' &&
+                (session ? (
+                  <TonightMode profile={profile} />
+                ) : (
+                  <p className="muted">
+                    <button onClick={() => edit('auth')}>Sign in</button> to
+                    use Tonight Mode.
+                  </p>
+                ))}
+              {area === 'taste-partners' &&
+                (session ? (
+                  <TastePartners />
+                ) : (
+                  <p className="muted">
+                    <button onClick={() => edit('auth')}>Sign in</button> to
+                    manage taste partners.
+                  </p>
+                ))}
+              {area === 'import' &&
+                (session ? (
+                  <LetterboxdImport />
+                ) : (
+                  <p className="muted">
+                    <button onClick={() => edit('auth')}>Sign in</button> to
+                    import a Letterboxd diary.
+                  </p>
+                ))}
               {area === 'settings' && profile && (
                 <Settings
                   key={profile.id}
@@ -875,11 +1343,19 @@ export default function Cinema({
                         <Bell size={18} />
                         <div>
                           <strong>@{n.username}</strong>{' '}
-                          {n.kind === 'follow'
-                            ? 'started following you'
-                            : n.kind === 'review_like'
-                              ? 'liked your review'
-                              : 'joined your discussion'}
+                          {notificationText(n.kind)}
+                          {n.kind === 'taste_share_invite' && (
+                            <>
+                              {' '}
+                              <button
+                                type="button"
+                                className="text-button"
+                                onClick={() => go('taste-partners')}
+                              >
+                                Respond
+                              </button>
+                            </>
+                          )}
                           <p className="muted">
                             {new Date(n.created_at).toLocaleString()} ·{' '}
                             {n.read ? 'Read' : 'New'}
@@ -892,6 +1368,41 @@ export default function Cinema({
                       Notifications appear when someone follows you, likes a
                       review, or joins a discussion.
                     </Empty>
+                  )}
+                  {availabilityAlerts.length > 0 && (
+                    <>
+                      <div className="section-heading">
+                        <h2>Availability changes</h2>
+                        <button
+                          onClick={async () => {
+                            result(
+                              await api.POST('/v1/availability-alerts', {
+                                body: {},
+                              })
+                            );
+                            refresh();
+                          }}
+                        >
+                          Mark all read
+                        </button>
+                      </div>
+                      {availabilityAlerts.map((a) => (
+                        <article className="notification" key={a.id}>
+                          <Bell size={18} />
+                          <div>
+                            <strong>{a.film.title}</strong>{' '}
+                            {a.change === 'added'
+                              ? 'is now available on ' + a.provider
+                              : 'is no longer listed on ' + a.provider}{' '}
+                            ({a.region})
+                            <p className="muted">
+                              {new Date(a.created_at).toLocaleString()} ·{' '}
+                              {a.read ? 'Read' : 'New'}
+                            </p>
+                          </div>
+                        </article>
+                      ))}
+                    </>
                   )}
                 </>
               )}
@@ -958,7 +1469,7 @@ export default function Cinema({
       {dialog && (
         <Modal
           title={
-            dialog.kind === 'auth'
+            dialog.kind === 'auth' || dialog.kind === 'onboarding'
               ? 'Welcome to Afterframe'
               : dialog.kind === 'log'
                 ? 'Another frame in your story'
@@ -970,15 +1481,41 @@ export default function Cinema({
                       ? 'A new perspective'
                       : dialog.kind === 'password'
                         ? 'Set a new password'
-                        : 'A collection of your own'
+                        : dialog.kind === 'poster'
+                          ? 'Share this one'
+                          : dialog.kind === 'craft'
+                            ? 'A craft observation'
+                            : dialog.kind === 'plan'
+                              ? 'Plan a group outing'
+                              : 'A collection of your own'
           }
-          close={() => setDialog(null)}
+          close={() => {
+            if (dialog.kind === 'onboarding')
+              sessionStorage.setItem('af_onboarding_dismissed', '1');
+            setDialog(null);
+          }}
         >
           {dialog.kind === 'auth' && (
             <AuthForm
               done={() => {
                 setDialog(null);
                 go('settings');
+              }}
+            />
+          )}
+          {dialog.kind === 'onboarding' && profile && (
+            <Onboarding
+              profile={profile}
+              suggestedUsername={suggested.username}
+              suggestedName={suggested.name}
+              done={() => {
+                setDialog(null);
+                setToast('Saved. Welcome in.');
+                refresh();
+              }}
+              skip={() => {
+                sessionStorage.setItem('af_onboarding_dismissed', '1');
+                setDialog(null);
               }}
             />
           )}
@@ -1006,6 +1543,28 @@ export default function Cinema({
             })()}
           {dialog.kind === 'opinion' && (
             <OpinionForm film={dialog.value as Models['Film']} done={done} />
+          )}
+          {dialog.kind === 'poster' && (
+            <PosterShare
+              review={dialog.value as Models['Review']}
+              done={() => setDialog(null)}
+            />
+          )}
+          {dialog.kind === 'craft' &&
+            (() => {
+              const v = dialog.value as {
+                film: Models['Film'];
+                note?: Models['CraftNote'];
+              };
+              return (
+                <CraftNoteForm film={v.film} note={v.note} done={done} />
+              );
+            })()}
+          {dialog.kind === 'plan' && (
+            <CreatePlanForm
+              film={dialog.value as Models['Film']}
+              done={() => setDialog(null)}
+            />
           )}
           {dialog.kind === 'memory' && (
             <MemoryForm memory={dialog.value as Models['Memory']} done={done} />

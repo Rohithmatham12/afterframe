@@ -3,18 +3,21 @@ import { useState } from 'react';
 import { LockKeyhole, Heart, MessageCircle } from 'lucide-react';
 import { api, result, type Models } from '@/lib/api';
 import { Empty, Poster, message } from './ui';
+import { toneLabel } from '@/lib/vocab';
 export function Reviews({
   reviews,
   refresh,
   notify,
   userID,
   edit,
+  share,
 }: {
   reviews: Models['Review'][];
   refresh: () => void;
   notify: (s: string) => void;
   userID?: string;
   edit: (r: Models['Review']) => void;
+  share?: (r: Models['Review']) => void;
 }) {
   return reviews.length ? (
     <div className="reviews">
@@ -26,6 +29,7 @@ export function Reviews({
           notify={notify}
           owner={userID === r.user_id}
           edit={() => edit(r)}
+          share={share && (() => share(r))}
         />
       ))}
     </div>
@@ -41,12 +45,14 @@ function Review({
   notify,
   owner,
   edit,
+  share,
 }: {
   review: Models['Review'];
   refresh: () => void;
   notify: (s: string) => void;
   owner: boolean;
   edit: () => void;
+  share?: () => void;
 }) {
   const [comments, setComments] = useState<Models['Comment'][] | null>(null),
     [body, setBody] = useState(''),
@@ -65,6 +71,7 @@ function Review({
       <div className="grow">
         <span className="eyebrow">
           @{r.username} · {new Date(r.created_at).toLocaleDateString()}
+          {r.tone && ' · ' + toneLabel(r.tone)}
         </span>
         <h3>
           {r.film.title} <small>{r.film.year}</small>
@@ -167,6 +174,7 @@ function Review({
           {owner && (
             <>
               <button onClick={edit}>Edit review</button>
+              {share && <button onClick={share}>Share poster</button>}
               <button
                 onClick={() => {
                   if (confirm('Delete this review?'))
@@ -200,6 +208,25 @@ function Review({
           >
             Report
           </button>
+          {!owner && (
+            <button
+              className="text-button"
+              onClick={() =>
+                act(async () => {
+                  result(
+                    await api.POST('/v1/mute', {
+                      body: { target_id: r.user_id, enabled: true },
+                    })
+                  );
+                  notify(
+                    '@' + r.username + ' muted. Manage this in Settings.'
+                  );
+                })
+              }
+            >
+              Mute @{r.username}
+            </button>
+          )}
         </div>
         {comments && (
           <section className="discussion">

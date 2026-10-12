@@ -625,10 +625,14 @@ footer p {
   font-size: 0.65rem;
   color: var(--muted);
 }
-.chip.safe {
+.chip.safe,
+.chip.selected {
   color: var(--accent);
   background: #24311c;
   border: 0;
+}
+button.chip {
+  cursor: pointer;
 }
 .section-heading {
   display: flex;
@@ -694,6 +698,27 @@ footer p {
 }
 .review-actions button[aria-pressed='true'] {
   color: var(--orange);
+}
+.craft-note {
+  padding: 1.2rem 0;
+  border-bottom: 1px solid var(--line);
+}
+/* GAP 01: TMDB-sourced content stays visually distinct from anything
+   Afterframe's own users wrote — never presented as a native review. */
+.tmdb-source {
+  color: var(--muted);
+}
+.tmdb-review {
+  padding: 1rem;
+  margin: 0.6rem 0;
+  border: 1px dashed var(--line);
+  border-radius: 0.4rem;
+}
+.tmdb-review .eyebrow {
+  font-size: 0.6rem;
+}
+.craft-note .eyebrow {
+  font-size: 0.6rem;
 }
 .discussion {
   margin-top: 1rem;
@@ -980,6 +1005,56 @@ dialog h2 {
   display: flex;
   gap: 1rem;
   align-items: center;
+}
+.notice {
+  padding: 1rem;
+  border: 1px solid var(--accent);
+  color: var(--text);
+  border-radius: 0.4rem;
+  margin: 1rem 0;
+}
+.availability {
+  margin-top: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.taste-quiz {
+  max-width: 420px;
+  margin: 0 auto;
+  text-align: center;
+}
+.taste-quiz .poster {
+  margin: 0 auto;
+}
+.taste-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: left;
+}
+.taste-bar-row {
+  display: grid;
+  grid-template-columns: 8rem 1fr 2.5rem;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+}
+.taste-bar {
+  height: 8px;
+  background: var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.taste-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+.taste-bar-fill.positive {
+  background: var(--accent);
+}
+.taste-bar-fill.negative {
+  background: var(--orange);
 }
 .loading {
   color: var(--muted);

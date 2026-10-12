@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -28,20 +30,65 @@ type Film struct {
 	Genres   []string `json:"genres"`
 	Director string   `json:"director"`
 	Runtime  int      `json:"runtime"`
+	// Certifications is a region->rating-string snapshot (e.g. "US":"PG-13"),
+	// sourced from TMDB's release_dates data. Coverage is genuinely
+	// incomplete for many films/regions — a missing entry means "unknown",
+	// never "unrated"/"safe"; GAP 18's Family Mode treats unknown
+	// conservatively (excluded), not permissively.
+	Certifications map[string]string `json:"certifications"`
+	// GAP 01: TMDB's own aggregate rating and community reviews, kept
+	// strictly separate from Afterframe's native reviews — always labelled
+	// as TMDB's, never presented as if Afterframe users wrote them.
+	VoteAverage      float64      `json:"vote_average"`
+	VoteCount        int          `json:"vote_count"`
+	OriginalLanguage string       `json:"original_language"`
+	TMDBReviews      []TMDBReview `json:"tmdb_reviews"`
 }
+
+// TMDBReview is a real review TMDB's own community left on a film — never
+// fabricated, never attributed to an Afterframe account.
+type TMDBReview struct {
+	Author  string   `json:"author"`
+	Content string   `json:"content"`
+	Rating  *float64 `json:"rating"`
+	URL     string   `json:"url"`
+}
+
 type movie struct {
-	ID       int64                   `json:"id"`
-	Title    string                  `json:"title"`
-	Date     string                  `json:"release_date"`
-	Poster   string                  `json:"poster_path"`
-	Backdrop string                  `json:"backdrop_path"`
-	Overview string                  `json:"overview"`
-	Genres   []struct{ Name string } `json:"genres"`
-	Runtime  int
-	Credits  struct {
+	ID               int64                   `json:"id"`
+	Title            string                  `json:"title"`
+	Date             string                  `json:"release_date"`
+	Poster           string                  `json:"poster_path"`
+	Backdrop         string                  `json:"backdrop_path"`
+	Overview         string                  `json:"overview"`
+	Genres           []struct{ Name string } `json:"genres"`
+	Runtime          int
+	VoteAverage      float64 `json:"vote_average"`
+	VoteCount        int     `json:"vote_count"`
+	OriginalLanguage string  `json:"original_language"`
+	Credits          struct {
 		Cast []struct{ Name, Character string }
 		Crew []struct{ Name, Job string }
 	}
+	ReleaseDates struct {
+		Results []struct {
+			Region  string `json:"iso_3166_1"`
+			Entries []struct {
+				Certification string `json:"certification"`
+				Type          int    `json:"type"`
+			} `json:"release_dates"`
+		} `json:"results"`
+	} `json:"release_dates"`
+	Reviews struct {
+		Results []struct {
+			Author        string `json:"author"`
+			Content       string `json:"content"`
+			URL           string `json:"url"`
+			AuthorDetails struct {
+				Rating *float64 `json:"rating"`
+			} `json:"author_details"`
+		} `json:"results"`
+	} `json:"reviews"`
 }
 
 func (m movie) film() Film {
@@ -49,7 +96,42 @@ func (m movie) film() Film {
 	if len(year) > 4 {
 		year = year[:4]
 	}
-	f := Film{Cast: []Credit{}, Crew: []Credit{}, ID: m.ID, Title: m.Title, Year: year, Poster: m.Poster, Backdrop: m.Backdrop, Overview: m.Overview, Genres: []string{}, Runtime: m.Runtime}
+	f := Film{
+		Cast: []Credit{}, Crew: []Credit{}, ID: m.ID, Title: m.Title, Year: year,
+		Poster: m.Poster, Backdrop: m.Backdrop, Overview: m.Overview, Genres: []string{},
+		Runtime: m.Runtime, Certifications: map[string]string{},
+		VoteAverage: m.VoteAverage, VoteCount: m.VoteCount, OriginalLanguage: m.OriginalLanguage,
+		TMDBReviews: []TMDBReview{},
+	}
+	for _, r := range m.Reviews.Results {
+		content := r.Content
+		if len(content) > 2000 {
+			content = content[:2000] + "…"
+		}
+		f.TMDBReviews = append(f.TMDBReviews, TMDBReview{
+			Author: r.Author, Content: content, Rating: r.AuthorDetails.Rating, URL: r.URL,
+		})
+	}
+	for _, r := range m.ReleaseDates.Results {
+		// Prefer a theatrical (type 3) certification when a region lists
+		// several release types; fall back to the first non-empty one.
+		best := ""
+		for _, e := range r.Entries {
+			if e.Certification == "" {
+				continue
+			}
+			if best == "" {
+				best = e.Certification
+			}
+			if e.Type == 3 {
+				best = e.Certification
+				break
+			}
+		}
+		if best != "" {
+			f.Certifications[r.Region] = best
+		}
+	}
 	for _, g := range m.Genres {
 		f.Genres = append(f.Genres, g.Name)
 	}
@@ -113,6 +195,60 @@ func (c *Client) Search(ctx context.Context, q, section string, page int) ([]Fil
 }
 func (c *Client) Detail(ctx context.Context, id int64) (Film, error) {
 	var m movie
-	e := c.get(ctx, "/movie/"+strconv.FormatInt(id, 10)+"?append_to_response=credits", &m)
+	e := c.get(ctx, "/movie/"+strconv.FormatInt(id, 10)+"?append_to_response=credits,release_dates,reviews", &m)
 	return m.film(), e
+}
+
+// Availability is a point-in-time observation, never a predicted future date.
+// Source is always attributed; callers must show it alongside provider names.
+type Availability struct {
+	Providers []string
+	Source    string
+}
+
+// AvailabilityProvider lets a future verified-expiration provider (a paid
+// partner feed, say) slot in without the watchlist or alert logic changing:
+// anything implementing this interface can replace or sit alongside TMDB.
+type AvailabilityProvider interface {
+	Availability(ctx context.Context, filmID int64, region string) (Availability, error)
+}
+
+// Showtime is a single verified theatrical listing. GAP 23 requires any
+// live showtime integration to come from a provider with appropriate API
+// rights — no $0 provider currently qualifies (ticketing APIs like
+// Fandango/AMC are paid partnerships; scraping a restricted ticketing site
+// is explicitly forbidden by the spec), so this interface exists as the
+// seam a future legitimate integration plugs into. Nothing in this codebase
+// implements it today; group planning (service.go) runs entirely on
+// manually agreed-upon plan slots instead, and is honest about that in its
+// own responses rather than inventing showtimes.
+type Showtime struct {
+	Theater string
+	Time    string // ISO 8601; never inferred or estimated
+	Source  string
+}
+type ShowtimeProvider interface {
+	Showtimes(ctx context.Context, filmID int64, region string) ([]Showtime, error)
+}
+
+// Availability calls TMDB's watch/providers endpoint, which is itself sourced
+// from JustWatch. TMDB's terms require crediting JustWatch wherever this data
+// is shown; see the attribution rendered in the frontend availability view.
+func (c *Client) Availability(ctx context.Context, filmID int64, region string) (Availability, error) {
+	var r struct {
+		Results map[string]struct {
+			Flatrate []struct {
+				ProviderName string `json:"provider_name"`
+			} `json:"flatrate"`
+		} `json:"results"`
+	}
+	if e := c.get(ctx, "/movie/"+strconv.FormatInt(filmID, 10)+"/watch/providers", &r); e != nil {
+		return Availability{}, e
+	}
+	names := []string{}
+	for _, p := range r.Results[strings.ToUpper(region)].Flatrate {
+		names = append(names, p.ProviderName)
+	}
+	sort.Strings(names)
+	return Availability{Providers: names, Source: "tmdb"}, nil
 }

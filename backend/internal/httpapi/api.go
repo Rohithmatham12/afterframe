@@ -109,8 +109,169 @@ func Handler(s *service.Service, a *auth.Verifier, origins []string) http.Handle
 			s.RetryErasures(r.Context(), a.Delete)
 			reply(w, map[string]string{"status": "Account data erased. Authentication erasure will retry automatically if the provider is unavailable."}, nil)
 		})
+		r.Get("/v1/username-available", func(w http.ResponseWriter, r *http.Request) {
+			v, e := s.UsernameAvailable(r.Context(), User(r), r.URL.Query().Get("u"))
+			reply(w, v, e)
+		})
+		r.Post("/v1/quiz", func(w http.ResponseWriter, r *http.Request) {
+			var answers []service.QuizAnswer
+			if e := decode(w, r, &answers, 8192); e != nil {
+				reply(w, nil, service.ErrInvalid)
+				return
+			}
+			v, e := s.SaveQuiz(r.Context(), User(r), answers)
+			reply(w, v, e)
+		})
+		r.Post("/v1/import/letterboxd", func(w http.ResponseWriter, r *http.Request) {
+			var entries []service.ImportEntry
+			if e := decode(w, r, &entries, 2<<20); e != nil {
+				reply(w, nil, service.ErrInvalid)
+				return
+			}
+			v, e := s.ImportDiary(r.Context(), User(r), entries)
+			reply(w, v, e)
+		})
+		r.Post("/v1/tonight", func(w http.ResponseWriter, r *http.Request) {
+			var req service.TonightRequest
+			if e := decode(w, r, &req, 4096); e != nil {
+				reply(w, nil, service.ErrInvalid)
+				return
+			}
+			v, e := s.Tonight(r.Context(), User(r), req)
+			reply(w, v, e)
+		})
+		r.Post("/v1/taste-share", func(w http.ResponseWriter, r *http.Request) {
+			var in struct {
+				Username string `json:"username"`
+			}
+			if e := decode(w, r, &in, 1000); e != nil {
+				reply(w, nil, service.ErrInvalid)
+				return
+			}
+			v, e := s.RequestTasteShare(r.Context(), User(r), in.Username)
+			reply(w, v, e)
+		})
+		r.Post("/v1/taste-share-respond", func(w http.ResponseWriter, r *http.Request) {
+			var in struct {
+				ID     string `json:"id"`
+				Accept bool   `json:"accept"`
+			}
+			if e := decode(w, r, &in, 1000); e != nil {
+				reply(w, nil, service.ErrInvalid)
+				return
+			}
+			v, e := s.RespondTasteShare(r.Context(), User(r), in.ID, in.Accept)
+			reply(w, v, e)
+		})
+		r.Get("/v1/compatibility", func(w http.ResponseWriter, r *http.Request) {
+			v, e := s.Compatibility(r.Context(), User(r), r.URL.Query().Get("partner"))
+			reply(w, v, e)
+		})
+		r.Get("/v1/availability", func(w http.ResponseWriter, r *http.Request) {
+			q := r.URL.Query()
+			v, e := s.Availability(r.Context(), User(r), service.Int(q.Get("film_id")), q.Get("region"))
+			reply(w, v, e)
+		})
 		r.Get("/v1/comments/{id}", func(w http.ResponseWriter, r *http.Request) {
 			v, e := s.Comments(r.Context(), User(r), chi.URLParam(r, "id"))
+			reply(w, v, e)
+		})
+		r.Post("/v1/theatrical-plans", func(w http.ResponseWriter, r *http.Request) {
+			var in struct {
+				FilmID int64  `json:"film_id"`
+				Note   string `json:"note"`
+			}
+			if e := decode(w, r, &in, 4096); e != nil {
+				reply(w, nil, service.ErrInvalid)
+				return
+			}
+			v, e := s.CreatePlan(r.Context(), User(r), in.FilmID, in.Note)
+			reply(w, v, e)
+		})
+		r.Get("/v1/theatrical-plans", func(w http.ResponseWriter, r *http.Request) {
+			v, e := s.PlanList(r.Context(), User(r))
+			reply(w, v, e)
+		})
+		r.Get("/v1/theatrical-plans/{id}", func(w http.ResponseWriter, r *http.Request) {
+			v, e := s.PlanDetail(r.Context(), User(r), chi.URLParam(r, "id"))
+			reply(w, v, e)
+		})
+		r.Post("/v1/theatrical-plans/{id}/slots", func(w http.ResponseWriter, r *http.Request) {
+			var in struct {
+				Label string `json:"label"`
+			}
+			if e := decode(w, r, &in, 1000); e != nil {
+				reply(w, nil, service.ErrInvalid)
+				return
+			}
+			v, e := s.AddPlanSlot(r.Context(), User(r), chi.URLParam(r, "id"), in.Label)
+			reply(w, v, e)
+		})
+		r.Post("/v1/theatrical-plans/{id}/invite", func(w http.ResponseWriter, r *http.Request) {
+			var in struct {
+				Username string `json:"username"`
+			}
+			if e := decode(w, r, &in, 1000); e != nil {
+				reply(w, nil, service.ErrInvalid)
+				return
+			}
+			v, e := s.InvitePlanParticipant(r.Context(), User(r), chi.URLParam(r, "id"), in.Username)
+			reply(w, v, e)
+		})
+		r.Post("/v1/theatrical-plans/{id}/respond", func(w http.ResponseWriter, r *http.Request) {
+			var in struct {
+				Accept bool `json:"accept"`
+			}
+			if e := decode(w, r, &in, 1000); e != nil {
+				reply(w, nil, service.ErrInvalid)
+				return
+			}
+			v, e := s.RespondPlanInvite(r.Context(), User(r), chi.URLParam(r, "id"), in.Accept)
+			reply(w, v, e)
+		})
+		r.Post("/v1/theatrical-plans/{id}/vote", func(w http.ResponseWriter, r *http.Request) {
+			var in struct {
+				SlotID string `json:"slot_id"`
+				On     bool   `json:"on"`
+			}
+			if e := decode(w, r, &in, 1000); e != nil {
+				reply(w, nil, service.ErrInvalid)
+				return
+			}
+			v, e := s.VotePlanSlot(r.Context(), User(r), in.SlotID, in.On)
+			reply(w, v, e)
+		})
+		r.Post("/v1/theatrical-plans/{id}/decide", func(w http.ResponseWriter, r *http.Request) {
+			var in struct {
+				SlotID string `json:"slot_id"`
+				Cancel bool   `json:"cancel"`
+			}
+			if e := decode(w, r, &in, 1000); e != nil {
+				reply(w, nil, service.ErrInvalid)
+				return
+			}
+			v, e := s.DecidePlan(r.Context(), User(r), chi.URLParam(r, "id"), in.SlotID, in.Cancel)
+			reply(w, v, e)
+		})
+		r.Get("/v1/tribes", func(w http.ResponseWriter, r *http.Request) {
+			v, e := s.TribeList(r.Context(), User(r))
+			reply(w, v, e)
+		})
+		r.Post("/v1/tribes", func(w http.ResponseWriter, r *http.Request) {
+			var in struct {
+				Tribe   string `json:"tribe"`
+				Enabled bool   `json:"enabled"`
+			}
+			if e := decode(w, r, &in, 1000); e != nil {
+				reply(w, nil, service.ErrInvalid)
+				return
+			}
+			v, e := s.SetTribe(r.Context(), User(r), in.Tribe, in.Enabled)
+			reply(w, v, e)
+		})
+		r.Get("/v1/film-ratings", func(w http.ResponseWriter, r *http.Request) {
+			q := r.URL.Query()
+			v, e := s.FilmRatings(r.Context(), User(r), service.Int(q.Get("film_id")), q.Get("tribe"))
 			reply(w, v, e)
 		})
 		r.Get("/v1/{area}", func(w http.ResponseWriter, r *http.Request) {
@@ -160,6 +321,9 @@ func reply(w http.ResponseWriter, v any, e error) {
 		case errors.Is(e, pgx.ErrNoRows) || errors.Is(e, service.ErrForbidden):
 			status = 404
 			msg = "Not found or not permitted"
+		case errors.As(e, &pe) && pe.Code == "23505" && pe.ConstraintName == "profiles_username_key":
+			status = 409
+			msg = "That username is taken. Try another one."
 		case errors.As(e, &pe) && (pe.Code == "23505" || pe.Code == "23514" || pe.Code == "23503"):
 			status = 409
 			msg = "This change conflicts with an existing record or valid value"

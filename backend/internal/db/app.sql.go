@@ -66,7 +66,7 @@ func (q *Queries) AddOpinion(ctx context.Context, dollar_1 []byte) ([]byte, erro
 }
 
 const addViewing = `-- name: AddViewing :one
-INSERT INTO viewings(user_id,film_id,watched_on,rating,notes,rewatch,private,request_id) SELECT viewer_id(),(d->>'film_id')::bigint,(d->>'watched_on')::date,(d->>'rating')::numeric,d->>'notes',(d->>'rewatch')::boolean,(d->>'private')::boolean,(d->>'request_id')::uuid FROM (SELECT $1::jsonb d) x ON CONFLICT(user_id,request_id) DO NOTHING RETURNING to_jsonb(viewings.*)
+INSERT INTO viewings(user_id,film_id,watched_on,rating,notes,rewatch,private,request_id,context) SELECT viewer_id(),(d->>'film_id')::bigint,(d->>'watched_on')::date,(d->>'rating')::numeric,d->>'notes',(d->>'rewatch')::boolean,(d->>'private')::boolean,(d->>'request_id')::uuid,coalesce(d->>'viewing_context','') FROM (SELECT $1::jsonb d) x ON CONFLICT(user_id,request_id) DO NOTHING RETURNING to_jsonb(viewings.*)
 `
 
 func (q *Queries) AddViewing(ctx context.Context, dollar_1 []byte) ([]byte, error) {
@@ -182,7 +182,7 @@ func (q *Queries) DeleteViewing(ctx context.Context, id pgtype.UUID) ([]byte, er
 }
 
 const diary = `-- name: Diary :one
-SELECT coalesce(jsonb_agg(item ORDER BY watched_on DESC,created_at DESC),'[]'::jsonb) FROM (SELECT to_jsonb(v.*)||jsonb_build_object('film',film_card(f)) item,v.watched_on,v.created_at FROM viewings v JOIN films f ON f.id=v.film_id WHERE v.user_id=viewer_id() AND ($1::text='' OR to_char(v.watched_on,'YYYY-MM')=$1) ORDER BY v.watched_on DESC,v.created_at DESC LIMIT 50 OFFSET $2) x
+SELECT coalesce(jsonb_agg(item ORDER BY watched_on DESC,created_at DESC),'[]'::jsonb) FROM (SELECT to_jsonb(v.*)||jsonb_build_object('film',film_card(f),'feelings',coalesce((SELECT jsonb_agg(feeling ORDER BY feeling) FROM viewing_feelings vf WHERE vf.viewing_id=v.id),'[]'::jsonb)) item,v.watched_on,v.created_at FROM viewings v JOIN films f ON f.id=v.film_id WHERE v.user_id=viewer_id() AND ($1::text='' OR to_char(v.watched_on,'YYYY-MM')=$1) ORDER BY v.watched_on DESC,v.created_at DESC LIMIT 50 OFFSET $2) x
 `
 
 type DiaryParams struct {
@@ -197,8 +197,26 @@ func (q *Queries) Diary(ctx context.Context, arg DiaryParams) (interface{}, erro
 	return coalesce, err
 }
 
+const deleteViewingFeelings = `-- name: DeleteViewingFeelings :exec
+DELETE FROM viewing_feelings WHERE viewing_id=$1
+`
+
+func (q *Queries) DeleteViewingFeelings(ctx context.Context, viewingID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteViewingFeelings, viewingID)
+	return err
+}
+
+const addViewingFeelings = `-- name: AddViewingFeelings :exec
+INSERT INTO viewing_feelings(viewing_id,feeling) SELECT $1,unnest($2::text[]) ON CONFLICT DO NOTHING
+`
+
+func (q *Queries) AddViewingFeelings(ctx context.Context, viewingID pgtype.UUID, feelings []string) error {
+	_, err := q.db.Exec(ctx, addViewingFeelings, viewingID, feelings)
+	return err
+}
+
 const editViewing = `-- name: EditViewing :one
-UPDATE viewings SET watched_on=(d->>'watched_on')::date,rating=(d->>'rating')::numeric,notes=d->>'notes',rewatch=(d->>'rewatch')::boolean,private=(d->>'private')::boolean FROM (SELECT $1::jsonb d) x WHERE id=(d->>'id')::uuid AND user_id=viewer_id() RETURNING to_jsonb(viewings.*)
+UPDATE viewings SET watched_on=(d->>'watched_on')::date,rating=(d->>'rating')::numeric,notes=d->>'notes',rewatch=(d->>'rewatch')::boolean,private=(d->>'private')::boolean,context=coalesce(d->>'viewing_context','') FROM (SELECT $1::jsonb d) x WHERE id=(d->>'id')::uuid AND user_id=viewer_id() RETURNING to_jsonb(viewings.*)
 `
 
 func (q *Queries) EditViewing(ctx context.Context, dollar_1 []byte) ([]byte, error) {
@@ -436,17 +454,18 @@ func (q *Queries) ReadNotifications(ctx context.Context) error {
 const readReviews = `-- name: ReadReviews :one
 SELECT coalesce(jsonb_agg(item ORDER BY created_at DESC),'[]'::jsonb) FROM (
  SELECT to_jsonb(r.*)||jsonb_build_object('film',film_card(f),'username',p.username,'likes',(SELECT count(*) FROM review_likes WHERE review_id=r.id),'liked',EXISTS(SELECT 1 FROM review_likes WHERE review_id=r.id AND user_id=viewer_id()),'allowed_layer',CASE WHEN r.user_id=viewer_id() THEN 3 ELSE greatest(coalesce((SELECT layer FROM reveals WHERE user_id=viewer_id() AND film_id=r.film_id),1),CASE WHEN EXISTS(SELECT 1 FROM viewings WHERE user_id=viewer_id() AND film_id=r.film_id) THEN 2 ELSE 1 END) END) item,r.created_at
- FROM reviews r JOIN profiles p ON p.id=r.user_id JOIN films f ON f.id=r.film_id WHERE profile_visible(r.user_id) AND ($1::bigint=0 OR r.film_id=$1) AND ($2::boolean=false OR r.user_id=viewer_id() OR EXISTS(SELECT 1 FROM follows WHERE user_id=viewer_id() AND target_id=r.user_id)) ORDER BY r.created_at DESC LIMIT 30 OFFSET $3) x
+ FROM reviews r JOIN profiles p ON p.id=r.user_id JOIN films f ON f.id=r.film_id WHERE profile_visible(r.user_id) AND ($1::bigint=0 OR r.film_id=$1) AND ($2::boolean=false OR r.user_id=viewer_id() OR EXISTS(SELECT 1 FROM follows WHERE user_id=viewer_id() AND target_id=r.user_id)) AND ($4::text='' OR r.tone=$4) AND NOT EXISTS(SELECT 1 FROM mutes WHERE user_id=viewer_id() AND target_id=r.user_id) ORDER BY r.created_at DESC LIMIT 30 OFFSET $3) x
 `
 
 type ReadReviewsParams struct {
-	Column1 int64 `json:"column_1"`
-	Column2 bool  `json:"column_2"`
-	Offset  int32 `json:"offset"`
+	Column1 int64  `json:"column_1"`
+	Column2 bool   `json:"column_2"`
+	Offset  int32  `json:"offset"`
+	Column4 string `json:"column_4"`
 }
 
 func (q *Queries) ReadReviews(ctx context.Context, arg ReadReviewsParams) (interface{}, error) {
-	row := q.db.QueryRow(ctx, readReviews, arg.Column1, arg.Column2, arg.Offset)
+	row := q.db.QueryRow(ctx, readReviews, arg.Column1, arg.Column2, arg.Offset, arg.Column4)
 	var coalesce interface{}
 	err := row.Scan(&coalesce)
 	return coalesce, err
@@ -554,7 +573,7 @@ func (q *Queries) SaveMemory(ctx context.Context, dollar_1 []byte) ([]byte, erro
 }
 
 const saveProfile = `-- name: SaveProfile :one
-UPDATE profiles SET username=$1::jsonb->>'username', name=$1::jsonb->>'name', bio=$1::jsonb->>'bio', private=($1::jsonb->>'private')::boolean, resurface=($1::jsonb->>'resurface')::boolean WHERE id=viewer_id() RETURNING to_jsonb(profiles.*)
+UPDATE profiles SET username=$1::jsonb->>'username', name=$1::jsonb->>'name', bio=$1::jsonb->>'bio', private=($1::jsonb->>'private')::boolean, resurface=($1::jsonb->>'resurface')::boolean, notify_availability=($1::jsonb->>'notify_availability')::boolean, family_policy=coalesce($1::jsonb->>'family_policy',family_policy), family_region=coalesce(nullif($1::jsonb->>'family_region',''),family_region) WHERE id=viewer_id() RETURNING to_jsonb(profiles.*)
 `
 
 func (q *Queries) SaveProfile(ctx context.Context, data []byte) ([]byte, error) {
@@ -564,8 +583,251 @@ func (q *Queries) SaveProfile(ctx context.Context, data []byte) ([]byte, error) 
 	return to_jsonb, err
 }
 
+const usernameTaken = `-- name: UsernameTaken :one
+SELECT username_taken($1::text)
+`
+
+func (q *Queries) UsernameTaken(ctx context.Context, dollar_1 string) (bool, error) {
+	row := q.db.QueryRow(ctx, usernameTaken, dollar_1)
+	var username_taken bool
+	err := row.Scan(&username_taken)
+	return username_taken, err
+}
+
+const saveQuizResponses = `-- name: SaveQuizResponses :exec
+INSERT INTO taste_quiz_responses(user_id,film_id,response)
+ SELECT viewer_id(), f, r FROM unnest($1::bigint[], $2::text[]) AS u(f,r)
+ ON CONFLICT(user_id,film_id) DO UPDATE SET response=excluded.response,created_at=now()
+`
+
+type SaveQuizResponsesParams struct {
+	FilmIds   []int64  `json:"film_ids"`
+	Responses []string `json:"responses"`
+}
+
+func (q *Queries) SaveQuizResponses(ctx context.Context, arg SaveQuizResponsesParams) error {
+	_, err := q.db.Exec(ctx, saveQuizResponses, arg.FilmIds, arg.Responses)
+	return err
+}
+
+const markQuizCompleted = `-- name: MarkQuizCompleted :one
+UPDATE profiles SET quiz_completed_at=now() WHERE id=viewer_id() RETURNING to_jsonb(profiles.*)
+`
+
+func (q *Queries) MarkQuizCompleted(ctx context.Context) ([]byte, error) {
+	row := q.db.QueryRow(ctx, markQuizCompleted)
+	var to_jsonb []byte
+	err := row.Scan(&to_jsonb)
+	return to_jsonb, err
+}
+
+const quizResponses = `-- name: QuizResponses :one
+SELECT coalesce(jsonb_agg(to_jsonb(t.*)||jsonb_build_object('film',film_card(f))),'[]'::jsonb) FROM taste_quiz_responses t JOIN films f ON f.id=t.film_id WHERE t.user_id=viewer_id()
+`
+
+func (q *Queries) QuizResponses(ctx context.Context) (interface{}, error) {
+	row := q.db.QueryRow(ctx, quizResponses)
+	var coalesce interface{}
+	err := row.Scan(&coalesce)
+	return coalesce, err
+}
+
+const mute = `-- name: Mute :exec
+INSERT INTO mutes(user_id,target_id) VALUES(viewer_id(),$1) ON CONFLICT DO NOTHING
+`
+
+func (q *Queries) Mute(ctx context.Context, targetID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, mute, targetID)
+	return err
+}
+
+const unmute = `-- name: Unmute :exec
+DELETE FROM mutes WHERE user_id=viewer_id() AND target_id=$1
+`
+
+func (q *Queries) Unmute(ctx context.Context, targetID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, unmute, targetID)
+	return err
+}
+
+const mutedProfiles = `-- name: MutedProfiles :one
+SELECT coalesce(jsonb_agg(to_jsonb(p.*) ORDER BY m.created_at DESC),'[]'::jsonb) FROM mutes m JOIN profiles p ON p.id=m.target_id WHERE m.user_id=viewer_id()
+`
+
+func (q *Queries) MutedProfiles(ctx context.Context) (interface{}, error) {
+	row := q.db.QueryRow(ctx, mutedProfiles)
+	var coalesce interface{}
+	err := row.Scan(&coalesce)
+	return coalesce, err
+}
+
+const profileIDByUsername = `-- name: ProfileIDByUsername :one
+SELECT id FROM profiles WHERE username=$1 AND profile_visible(id)
+`
+
+func (q *Queries) ProfileIDByUsername(ctx context.Context, username string) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, profileIDByUsername, username)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const requestTasteShare = `-- name: RequestTasteShare :one
+INSERT INTO taste_shares(requester_id,partner_id) VALUES(viewer_id(),$1) RETURNING to_jsonb(taste_shares.*)
+`
+
+func (q *Queries) RequestTasteShare(ctx context.Context, partnerID pgtype.UUID) ([]byte, error) {
+	row := q.db.QueryRow(ctx, requestTasteShare, partnerID)
+	var to_jsonb []byte
+	err := row.Scan(&to_jsonb)
+	return to_jsonb, err
+}
+
+const respondTasteShare = `-- name: RespondTasteShare :one
+UPDATE taste_shares SET status=$2,responded_at=now() WHERE id=$1 AND partner_id=viewer_id() AND status='pending' RETURNING to_jsonb(taste_shares.*)
+`
+
+type RespondTasteShareParams struct {
+	ID     pgtype.UUID `json:"id"`
+	Status string      `json:"status"`
+}
+
+func (q *Queries) RespondTasteShare(ctx context.Context, arg RespondTasteShareParams) ([]byte, error) {
+	row := q.db.QueryRow(ctx, respondTasteShare, arg.ID, arg.Status)
+	var to_jsonb []byte
+	err := row.Scan(&to_jsonb)
+	return to_jsonb, err
+}
+
+const tasteShares = `-- name: TasteShares :one
+SELECT coalesce(jsonb_agg(to_jsonb(ts.*)||jsonb_build_object(
+ 'username',CASE WHEN ts.requester_id=viewer_id() THEN partner.username ELSE requester.username END,
+ 'direction',CASE WHEN ts.requester_id=viewer_id() THEN 'sent' ELSE 'received' END
+) ORDER BY ts.created_at DESC),'[]'::jsonb)
+FROM taste_shares ts
+JOIN profiles requester ON requester.id=ts.requester_id
+JOIN profiles partner ON partner.id=ts.partner_id
+WHERE ts.requester_id=viewer_id() OR ts.partner_id=viewer_id()
+`
+
+func (q *Queries) TasteShares(ctx context.Context) (interface{}, error) {
+	row := q.db.QueryRow(ctx, tasteShares)
+	var coalesce interface{}
+	err := row.Scan(&coalesce)
+	return coalesce, err
+}
+
+const sharedTaste = `-- name: SharedTaste :one
+SELECT shared_taste($1::uuid)
+`
+
+func (q *Queries) SharedTaste(ctx context.Context, partner pgtype.UUID) ([]byte, error) {
+	row := q.db.QueryRow(ctx, sharedTaste, partner)
+	var to_jsonb []byte
+	err := row.Scan(&to_jsonb)
+	return to_jsonb, err
+}
+
+const tasteShareAccepted = `-- name: TasteShareAccepted :one
+SELECT EXISTS(SELECT 1 FROM taste_shares WHERE status='accepted' AND ((requester_id=viewer_id() AND partner_id=$1) OR (requester_id=$1 AND partner_id=viewer_id())))
+`
+
+func (q *Queries) TasteShareAccepted(ctx context.Context, partner pgtype.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, tasteShareAccepted, partner)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const watchedFilmIDs = `-- name: WatchedFilmIDs :one
+SELECT coalesce(jsonb_agg(DISTINCT film_id),'[]'::jsonb) FROM viewings WHERE user_id=viewer_id()
+`
+
+func (q *Queries) WatchedFilmIDs(ctx context.Context) (interface{}, error) {
+	row := q.db.QueryRow(ctx, watchedFilmIDs)
+	var coalesce interface{}
+	err := row.Scan(&coalesce)
+	return coalesce, err
+}
+
+const getFilmAvailability = `-- name: GetFilmAvailability :one
+SELECT providers, source, fetched_at FROM film_availability WHERE film_id=$1 AND region=$2
+`
+
+type GetFilmAvailabilityParams struct {
+	FilmID int64  `json:"film_id"`
+	Region string `json:"region"`
+}
+
+type GetFilmAvailabilityRow struct {
+	Providers []string           `json:"providers"`
+	Source    string             `json:"source"`
+	FetchedAt pgtype.Timestamptz `json:"fetched_at"`
+}
+
+func (q *Queries) GetFilmAvailability(ctx context.Context, arg GetFilmAvailabilityParams) (GetFilmAvailabilityRow, error) {
+	row := q.db.QueryRow(ctx, getFilmAvailability, arg.FilmID, arg.Region)
+	var i GetFilmAvailabilityRow
+	err := row.Scan(&i.Providers, &i.Source, &i.FetchedAt)
+	return i, err
+}
+
+const setFilmAvailability = `-- name: SetFilmAvailability :exec
+INSERT INTO film_availability(film_id,region,providers,source,fetched_at) VALUES($1,$2,$3,$4,now())
+ ON CONFLICT(film_id,region) DO UPDATE SET providers=excluded.providers,source=excluded.source,fetched_at=now()
+`
+
+type SetFilmAvailabilityParams struct {
+	FilmID    int64    `json:"film_id"`
+	Region    string   `json:"region"`
+	Providers []string `json:"providers"`
+	Source    string   `json:"source"`
+}
+
+func (q *Queries) SetFilmAvailability(ctx context.Context, arg SetFilmAvailabilityParams) error {
+	_, err := q.db.Exec(ctx, setFilmAvailability, arg.FilmID, arg.Region, arg.Providers, arg.Source)
+	return err
+}
+
+const notifyAvailabilityChange = `-- name: NotifyAvailabilityChange :exec
+INSERT INTO availability_alerts(user_id,film_id,region,provider,change)
+ SELECT w.user_id,$1,$2,$3,$4 FROM watchlist w JOIN profiles p ON p.id=w.user_id WHERE w.film_id=$1 AND p.notify_availability
+`
+
+type NotifyAvailabilityChangeParams struct {
+	FilmID   int64  `json:"film_id"`
+	Region   string `json:"region"`
+	Provider string `json:"provider"`
+	Change   string `json:"change"`
+}
+
+func (q *Queries) NotifyAvailabilityChange(ctx context.Context, arg NotifyAvailabilityChangeParams) error {
+	_, err := q.db.Exec(ctx, notifyAvailabilityChange, arg.FilmID, arg.Region, arg.Provider, arg.Change)
+	return err
+}
+
+const availabilityAlerts = `-- name: AvailabilityAlerts :one
+SELECT coalesce(jsonb_agg(to_jsonb(a.*)||jsonb_build_object('film',film_card(f)) ORDER BY a.created_at DESC),'[]'::jsonb) FROM (SELECT * FROM availability_alerts WHERE user_id=viewer_id() ORDER BY created_at DESC LIMIT 50) a JOIN films f ON f.id=a.film_id
+`
+
+func (q *Queries) AvailabilityAlerts(ctx context.Context) (interface{}, error) {
+	row := q.db.QueryRow(ctx, availabilityAlerts)
+	var coalesce interface{}
+	err := row.Scan(&coalesce)
+	return coalesce, err
+}
+
+const readAvailabilityAlerts = `-- name: ReadAvailabilityAlerts :exec
+UPDATE availability_alerts SET read=true WHERE user_id=viewer_id()
+`
+
+func (q *Queries) ReadAvailabilityAlerts(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, readAvailabilityAlerts)
+	return err
+}
+
 const saveReview = `-- name: SaveReview :one
-INSERT INTO reviews(id,user_id,film_id,safe,watched,reflection) SELECT coalesce(nullif(d->>'id','')::uuid,gen_random_uuid()),viewer_id(),(d->>'film_id')::bigint,d->>'safe',d->>'watched',d->>'reflection' FROM (SELECT $1::jsonb d) x ON CONFLICT(id) DO UPDATE SET safe=excluded.safe,watched=excluded.watched,reflection=excluded.reflection,updated_at=now() WHERE reviews.user_id=viewer_id() RETURNING to_jsonb(reviews.*)
+INSERT INTO reviews(id,user_id,film_id,safe,watched,reflection,tone) SELECT coalesce(nullif(d->>'id','')::uuid,gen_random_uuid()),viewer_id(),(d->>'film_id')::bigint,d->>'safe',d->>'watched',d->>'reflection',coalesce(d->>'tone','') FROM (SELECT $1::jsonb d) x ON CONFLICT(id) DO UPDATE SET safe=excluded.safe,watched=excluded.watched,reflection=excluded.reflection,tone=excluded.tone,updated_at=now() WHERE reviews.user_id=viewer_id() RETURNING to_jsonb(reviews.*)
 `
 
 func (q *Queries) SaveReview(ctx context.Context, dollar_1 []byte) ([]byte, error) {
@@ -622,16 +884,18 @@ func (q *Queries) SetViewer(ctx context.Context, dollar_1 string) error {
 }
 
 const setWatchlist = `-- name: SetWatchlist :one
-INSERT INTO watchlist(user_id,film_id,private) VALUES(viewer_id(),$1,$2) ON CONFLICT(user_id,film_id) DO UPDATE SET private=excluded.private RETURNING to_jsonb(watchlist.*)
+INSERT INTO watchlist(user_id,film_id,private,intent,intent_note) VALUES(viewer_id(),$1,$2,$3,$4) ON CONFLICT(user_id,film_id) DO UPDATE SET private=excluded.private,intent=excluded.intent,intent_note=excluded.intent_note RETURNING to_jsonb(watchlist.*)
 `
 
 type SetWatchlistParams struct {
-	FilmID  int64 `json:"film_id"`
-	Private bool  `json:"private"`
+	FilmID     int64  `json:"film_id"`
+	Private    bool   `json:"private"`
+	Intent     string `json:"intent"`
+	IntentNote string `json:"intent_note"`
 }
 
 func (q *Queries) SetWatchlist(ctx context.Context, arg SetWatchlistParams) ([]byte, error) {
-	row := q.db.QueryRow(ctx, setWatchlist, arg.FilmID, arg.Private)
+	row := q.db.QueryRow(ctx, setWatchlist, arg.FilmID, arg.Private, arg.Intent, arg.IntentNote)
 	var to_jsonb []byte
 	err := row.Scan(&to_jsonb)
 	return to_jsonb, err
@@ -676,7 +940,7 @@ func (q *Queries) UnlikeReview(ctx context.Context, reviewID pgtype.UUID) error 
 }
 
 const upsertFilm = `-- name: UpsertFilm :one
-INSERT INTO films(id,title,year,poster,backdrop,overview,genres,director,runtime,cast_members,crew) SELECT (d->>'id')::bigint,d->>'title',d->>'year',d->>'poster',d->>'backdrop',d->>'overview',ARRAY(SELECT jsonb_array_elements_text(d->'genres')),d->>'director',(d->>'runtime')::int,coalesce(nullif(d->'cast_members','null'::jsonb),'[]'::jsonb),coalesce(nullif(d->'crew','null'::jsonb),'[]'::jsonb) FROM (SELECT $1::jsonb d) x ON CONFLICT(id) DO UPDATE SET title=excluded.title,year=excluded.year,poster=excluded.poster,backdrop=excluded.backdrop,overview=excluded.overview,genres=excluded.genres,director=excluded.director,runtime=excluded.runtime,cast_members=excluded.cast_members,crew=excluded.crew,cached_at=now() RETURNING to_jsonb(films.*)
+INSERT INTO films(id,title,year,poster,backdrop,overview,genres,director,runtime,cast_members,crew,certifications,vote_average,vote_count,original_language,tmdb_reviews) SELECT (d->>'id')::bigint,d->>'title',d->>'year',d->>'poster',d->>'backdrop',d->>'overview',ARRAY(SELECT jsonb_array_elements_text(d->'genres')),d->>'director',(d->>'runtime')::int,coalesce(nullif(d->'cast_members','null'::jsonb),'[]'::jsonb),coalesce(nullif(d->'crew','null'::jsonb),'[]'::jsonb),coalesce(nullif(d->'certifications','null'::jsonb),'{}'::jsonb),coalesce((d->>'vote_average')::numeric,0),coalesce((d->>'vote_count')::int,0),coalesce(d->>'original_language',''),coalesce(nullif(d->'tmdb_reviews','null'::jsonb),'[]'::jsonb) FROM (SELECT $1::jsonb d) x ON CONFLICT(id) DO UPDATE SET title=excluded.title,year=excluded.year,poster=excluded.poster,backdrop=excluded.backdrop,overview=excluded.overview,genres=excluded.genres,director=excluded.director,runtime=excluded.runtime,cast_members=excluded.cast_members,crew=excluded.crew,certifications=excluded.certifications,vote_average=excluded.vote_average,vote_count=excluded.vote_count,original_language=excluded.original_language,tmdb_reviews=excluded.tmdb_reviews,cached_at=now() RETURNING to_jsonb(films.*)
 `
 
 func (q *Queries) UpsertFilm(ctx context.Context, dollar_1 []byte) ([]byte, error) {
@@ -687,12 +951,330 @@ func (q *Queries) UpsertFilm(ctx context.Context, dollar_1 []byte) ([]byte, erro
 }
 
 const watchlist = `-- name: Watchlist :one
-SELECT coalesce(jsonb_agg(to_jsonb(w.*)||jsonb_build_object('film',film_card(f)) ORDER BY w.created_at DESC),'[]'::jsonb) FROM (SELECT user_id, film_id, private, created_at FROM watchlist WHERE user_id=viewer_id() ORDER BY created_at DESC LIMIT 50 OFFSET $1) w JOIN films f ON f.id=w.film_id
+SELECT coalesce(jsonb_agg(to_jsonb(w.*)||jsonb_build_object('film',film_card(f)) ORDER BY w.created_at DESC),'[]'::jsonb) FROM (SELECT * FROM watchlist WHERE user_id=viewer_id() AND ($1::text='' OR intent=$1) ORDER BY created_at DESC LIMIT 50 OFFSET $2) w JOIN films f ON f.id=w.film_id
 `
 
-func (q *Queries) Watchlist(ctx context.Context, offset int32) (interface{}, error) {
-	row := q.db.QueryRow(ctx, watchlist, offset)
+type WatchlistParams struct {
+	Intent string `json:"intent"`
+	Offset int32  `json:"offset"`
+}
+
+func (q *Queries) Watchlist(ctx context.Context, arg WatchlistParams) (interface{}, error) {
+	row := q.db.QueryRow(ctx, watchlist, arg.Intent, arg.Offset)
 	var coalesce interface{}
 	err := row.Scan(&coalesce)
 	return coalesce, err
+}
+
+const saveProgress = `-- name: SaveProgress :one
+INSERT INTO viewing_progress(user_id,film_id,status,progress_minutes,reason) SELECT viewer_id(),(d->>'film_id')::bigint,d->>'status',nullif(d->>'progress_minutes','')::int,nullif(d->>'reason','') FROM (SELECT $1::jsonb d) x ON CONFLICT(user_id,film_id) DO UPDATE SET status=excluded.status,progress_minutes=excluded.progress_minutes,reason=excluded.reason,updated_at=now() RETURNING to_jsonb(viewing_progress.*)
+`
+
+func (q *Queries) SaveProgress(ctx context.Context, dollar_1 []byte) ([]byte, error) {
+	row := q.db.QueryRow(ctx, saveProgress, dollar_1)
+	var to_jsonb []byte
+	err := row.Scan(&to_jsonb)
+	return to_jsonb, err
+}
+
+const progress = `-- name: Progress :one
+SELECT coalesce(jsonb_agg(to_jsonb(vp.*)||jsonb_build_object('film',film_card(f)) ORDER BY vp.updated_at DESC),'[]'::jsonb) FROM viewing_progress vp JOIN films f ON f.id=vp.film_id WHERE vp.user_id=viewer_id()
+`
+
+func (q *Queries) Progress(ctx context.Context) (interface{}, error) {
+	row := q.db.QueryRow(ctx, progress)
+	var coalesce interface{}
+	err := row.Scan(&coalesce)
+	return coalesce, err
+}
+
+const clearProgress = `-- name: ClearProgress :exec
+DELETE FROM viewing_progress WHERE user_id=viewer_id() AND film_id=$1
+`
+
+func (q *Queries) ClearProgress(ctx context.Context, filmID int64) error {
+	_, err := q.db.Exec(ctx, clearProgress, filmID)
+	return err
+}
+
+const unresolvedProgressFilmIDs = `-- name: UnresolvedProgressFilmIDs :one
+SELECT coalesce(jsonb_agg(DISTINCT film_id),'[]'::jsonb) FROM viewing_progress WHERE user_id=viewer_id() AND status IN ('paused','abandoned')
+`
+
+func (q *Queries) UnresolvedProgressFilmIDs(ctx context.Context) (interface{}, error) {
+	row := q.db.QueryRow(ctx, unresolvedProgressFilmIDs)
+	var coalesce interface{}
+	err := row.Scan(&coalesce)
+	return coalesce, err
+}
+
+const saveCraftNote = `-- name: SaveCraftNote :one
+INSERT INTO craft_notes(id,user_id,film_id,viewing_id,category,scene,body,spoiler,private) SELECT coalesce(nullif(d->>'id','')::uuid,gen_random_uuid()),viewer_id(),(d->>'film_id')::bigint,v.id,d->>'category',coalesce(d->>'scene',''),coalesce(d->>'body',''),coalesce((d->>'spoiler')::boolean,false),coalesce((d->>'private')::boolean,true) FROM (SELECT $1::jsonb d) x LEFT JOIN viewings v ON v.id=nullif(d->>'viewing_id','')::uuid AND v.user_id=viewer_id() AND v.film_id=(d->>'film_id')::bigint WHERE nullif(d->>'viewing_id','') IS NULL OR v.id IS NOT NULL ON CONFLICT(id) DO UPDATE SET film_id=excluded.film_id,viewing_id=excluded.viewing_id,category=excluded.category,scene=excluded.scene,body=excluded.body,spoiler=excluded.spoiler,private=excluded.private,updated_at=now() WHERE craft_notes.user_id=viewer_id() RETURNING (to_jsonb(craft_notes.*)-'search')
+`
+
+func (q *Queries) SaveCraftNote(ctx context.Context, dollar_1 []byte) ([]byte, error) {
+	row := q.db.QueryRow(ctx, saveCraftNote, dollar_1)
+	var column_1 []byte
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const craftNotesForFilm = `-- name: CraftNotesForFilm :one
+SELECT coalesce(jsonb_agg((to_jsonb(c.*)-'search')||jsonb_build_object('username',p.username,'allowed_spoiler',c.user_id=viewer_id() OR NOT c.spoiler OR coalesce((SELECT layer FROM reveals WHERE user_id=viewer_id() AND film_id=c.film_id),1)>=2 OR EXISTS(SELECT 1 FROM viewings WHERE user_id=viewer_id() AND film_id=c.film_id)) ORDER BY c.created_at DESC),'[]'::jsonb) FROM craft_notes c JOIN profiles p ON p.id=c.user_id WHERE c.film_id=$1 AND (c.user_id=viewer_id() OR (NOT c.private AND profile_visible(c.user_id)))
+`
+
+func (q *Queries) CraftNotesForFilm(ctx context.Context, filmID int64) (interface{}, error) {
+	row := q.db.QueryRow(ctx, craftNotesForFilm, filmID)
+	var coalesce interface{}
+	err := row.Scan(&coalesce)
+	return coalesce, err
+}
+
+const searchCraftNotes = `-- name: SearchCraftNotes :one
+SELECT coalesce(jsonb_agg((to_jsonb(c.*)-'search')||jsonb_build_object('film',film_card(f)) ORDER BY c.created_at DESC),'[]'::jsonb) FROM craft_notes c JOIN films f ON f.id=c.film_id WHERE c.user_id=viewer_id() AND ($1::text='' OR c.search @@ websearch_to_tsquery('english',$1) OR (c.scene||' '||c.body||' '||c.category) ILIKE '%'||$1||'%') LIMIT 200
+`
+
+func (q *Queries) SearchCraftNotes(ctx context.Context, dollar_1 string) (interface{}, error) {
+	row := q.db.QueryRow(ctx, searchCraftNotes, dollar_1)
+	var coalesce interface{}
+	err := row.Scan(&coalesce)
+	return coalesce, err
+}
+
+const deleteCraftNote = `-- name: DeleteCraftNote :one
+DELETE FROM craft_notes WHERE id=$1 AND user_id=viewer_id() RETURNING (to_jsonb(craft_notes.*)-'search')
+`
+
+func (q *Queries) DeleteCraftNote(ctx context.Context, id pgtype.UUID) ([]byte, error) {
+	row := q.db.QueryRow(ctx, deleteCraftNote, id)
+	var to_jsonb []byte
+	err := row.Scan(&to_jsonb)
+	return to_jsonb, err
+}
+
+const createPlan = `-- name: CreatePlan :one
+INSERT INTO theatrical_plans(film_id,creator_id,note) VALUES($1,viewer_id(),$2) RETURNING to_jsonb(theatrical_plans.*)
+`
+
+type CreatePlanParams struct {
+	FilmID int64  `json:"film_id"`
+	Note   string `json:"note"`
+}
+
+func (q *Queries) CreatePlan(ctx context.Context, arg CreatePlanParams) ([]byte, error) {
+	row := q.db.QueryRow(ctx, createPlan, arg.FilmID, arg.Note)
+	var to_jsonb []byte
+	err := row.Scan(&to_jsonb)
+	return to_jsonb, err
+}
+
+const joinOwnPlan = `-- name: JoinOwnPlan :exec
+INSERT INTO plan_participants(plan_id,user_id,status) VALUES($1,viewer_id(),'joined') ON CONFLICT DO NOTHING
+`
+
+func (q *Queries) JoinOwnPlan(ctx context.Context, planID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, joinOwnPlan, planID)
+	return err
+}
+
+const addPlanSlot = `-- name: AddPlanSlot :one
+INSERT INTO plan_slots(plan_id,label) SELECT $1,$2 WHERE EXISTS(SELECT 1 FROM theatrical_plans WHERE id=$1 AND creator_id=viewer_id()) RETURNING to_jsonb(plan_slots.*)
+`
+
+type AddPlanSlotParams struct {
+	PlanID pgtype.UUID `json:"plan_id"`
+	Label  string      `json:"label"`
+}
+
+func (q *Queries) AddPlanSlot(ctx context.Context, arg AddPlanSlotParams) ([]byte, error) {
+	row := q.db.QueryRow(ctx, addPlanSlot, arg.PlanID, arg.Label)
+	var to_jsonb []byte
+	err := row.Scan(&to_jsonb)
+	return to_jsonb, err
+}
+
+const invitePlanParticipant = `-- name: InvitePlanParticipant :one
+INSERT INTO plan_participants(plan_id,user_id) SELECT $1,$2 WHERE EXISTS(SELECT 1 FROM theatrical_plans WHERE id=$1 AND creator_id=viewer_id()) ON CONFLICT DO NOTHING RETURNING to_jsonb(plan_participants.*)
+`
+
+type InvitePlanParticipantParams struct {
+	PlanID pgtype.UUID `json:"plan_id"`
+	UserID pgtype.UUID `json:"user_id"`
+}
+
+func (q *Queries) InvitePlanParticipant(ctx context.Context, arg InvitePlanParticipantParams) ([]byte, error) {
+	row := q.db.QueryRow(ctx, invitePlanParticipant, arg.PlanID, arg.UserID)
+	var to_jsonb []byte
+	err := row.Scan(&to_jsonb)
+	return to_jsonb, err
+}
+
+const respondPlanInvite = `-- name: RespondPlanInvite :one
+UPDATE plan_participants SET status=$2 WHERE plan_id=$1 AND user_id=viewer_id() RETURNING to_jsonb(plan_participants.*)
+`
+
+type RespondPlanInviteParams struct {
+	PlanID pgtype.UUID `json:"plan_id"`
+	Status string      `json:"status"`
+}
+
+func (q *Queries) RespondPlanInvite(ctx context.Context, arg RespondPlanInviteParams) ([]byte, error) {
+	row := q.db.QueryRow(ctx, respondPlanInvite, arg.PlanID, arg.Status)
+	var to_jsonb []byte
+	err := row.Scan(&to_jsonb)
+	return to_jsonb, err
+}
+
+const voteSlot = `-- name: VoteSlot :exec
+INSERT INTO plan_votes(slot_id,user_id) SELECT $1,viewer_id() WHERE EXISTS(SELECT 1 FROM plan_participants pp JOIN plan_slots s ON s.plan_id=pp.plan_id WHERE s.id=$1 AND pp.user_id=viewer_id() AND pp.status='joined') ON CONFLICT DO NOTHING
+`
+
+func (q *Queries) VoteSlot(ctx context.Context, slotID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, voteSlot, slotID)
+	return err
+}
+
+const unvoteSlot = `-- name: UnvoteSlot :exec
+DELETE FROM plan_votes WHERE slot_id=$1 AND user_id=viewer_id()
+`
+
+func (q *Queries) UnvoteSlot(ctx context.Context, slotID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, unvoteSlot, slotID)
+	return err
+}
+
+const decidePlan = `-- name: DecidePlan :one
+UPDATE theatrical_plans SET status='decided',decided_slot_id=$2,updated_at=now() WHERE id=$1 AND creator_id=viewer_id() AND EXISTS(SELECT 1 FROM plan_slots WHERE id=$2 AND plan_id=$1) RETURNING to_jsonb(theatrical_plans.*)
+`
+
+type DecidePlanParams struct {
+	ID            pgtype.UUID `json:"id"`
+	DecidedSlotID pgtype.UUID `json:"decided_slot_id"`
+}
+
+func (q *Queries) DecidePlan(ctx context.Context, arg DecidePlanParams) ([]byte, error) {
+	row := q.db.QueryRow(ctx, decidePlan, arg.ID, arg.DecidedSlotID)
+	var to_jsonb []byte
+	err := row.Scan(&to_jsonb)
+	return to_jsonb, err
+}
+
+const cancelPlan = `-- name: CancelPlan :one
+UPDATE theatrical_plans SET status='cancelled',updated_at=now() WHERE id=$1 AND creator_id=viewer_id() RETURNING to_jsonb(theatrical_plans.*)
+`
+
+func (q *Queries) CancelPlan(ctx context.Context, id pgtype.UUID) ([]byte, error) {
+	row := q.db.QueryRow(ctx, cancelPlan, id)
+	var to_jsonb []byte
+	err := row.Scan(&to_jsonb)
+	return to_jsonb, err
+}
+
+const myPlans = `-- name: MyPlans :one
+SELECT coalesce(jsonb_agg(to_jsonb(p.*)||jsonb_build_object('film',film_card(f)) ORDER BY p.created_at DESC),'[]'::jsonb) FROM theatrical_plans p JOIN films f ON f.id=p.film_id WHERE p.creator_id=viewer_id() OR EXISTS(SELECT 1 FROM plan_participants pp WHERE pp.plan_id=p.id AND pp.user_id=viewer_id())
+`
+
+func (q *Queries) MyPlans(ctx context.Context) (interface{}, error) {
+	row := q.db.QueryRow(ctx, myPlans)
+	var coalesce interface{}
+	err := row.Scan(&coalesce)
+	return coalesce, err
+}
+
+const planDetail = `-- name: PlanDetail :one
+SELECT to_jsonb(p.*)||jsonb_build_object('film',film_card(f)) FROM theatrical_plans p JOIN films f ON f.id=p.film_id WHERE p.id=$1
+`
+
+func (q *Queries) PlanDetail(ctx context.Context, id pgtype.UUID) ([]byte, error) {
+	row := q.db.QueryRow(ctx, planDetail, id)
+	var column_1 []byte
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const planSlots = `-- name: PlanSlots :one
+SELECT coalesce(jsonb_agg(to_jsonb(s.*)||jsonb_build_object('votes',(SELECT count(*) FROM plan_votes v WHERE v.slot_id=s.id),'voted',EXISTS(SELECT 1 FROM plan_votes v WHERE v.slot_id=s.id AND v.user_id=viewer_id())) ORDER BY s.created_at),'[]'::jsonb) FROM plan_slots s WHERE s.plan_id=$1
+`
+
+func (q *Queries) PlanSlots(ctx context.Context, planID pgtype.UUID) (interface{}, error) {
+	row := q.db.QueryRow(ctx, planSlots, planID)
+	var coalesce interface{}
+	err := row.Scan(&coalesce)
+	return coalesce, err
+}
+
+const planParticipants = `-- name: PlanParticipants :one
+SELECT plan_roster($1::uuid)
+`
+
+func (q *Queries) PlanParticipants(ctx context.Context, planID pgtype.UUID) (interface{}, error) {
+	row := q.db.QueryRow(ctx, planParticipants, planID)
+	var coalesce interface{}
+	err := row.Scan(&coalesce)
+	return coalesce, err
+}
+
+const joinTribe = `-- name: JoinTribe :exec
+INSERT INTO user_tribes(user_id,tribe_id) VALUES(viewer_id(),$1) ON CONFLICT DO NOTHING
+`
+
+func (q *Queries) JoinTribe(ctx context.Context, tribeID string) error {
+	_, err := q.db.Exec(ctx, joinTribe, tribeID)
+	return err
+}
+
+const leaveTribe = `-- name: LeaveTribe :exec
+DELETE FROM user_tribes WHERE user_id=viewer_id() AND tribe_id=$1
+`
+
+func (q *Queries) LeaveTribe(ctx context.Context, tribeID string) error {
+	_, err := q.db.Exec(ctx, leaveTribe, tribeID)
+	return err
+}
+
+const myTribes = `-- name: MyTribes :one
+SELECT coalesce(jsonb_agg(tribe_id),'[]'::jsonb) FROM user_tribes WHERE user_id=viewer_id()
+`
+
+func (q *Queries) MyTribes(ctx context.Context) (interface{}, error) {
+	row := q.db.QueryRow(ctx, myTribes)
+	var coalesce interface{}
+	err := row.Scan(&coalesce)
+	return coalesce, err
+}
+
+const globalRating = `-- name: GlobalRating :one
+SELECT avg_rating::float8, sample_size FROM global_rating($1)
+`
+
+type GlobalRatingRow struct {
+	AvgRating  *float64 `json:"avg_rating"`
+	SampleSize int64    `json:"sample_size"`
+}
+
+func (q *Queries) GlobalRating(ctx context.Context, filmID int64) (GlobalRatingRow, error) {
+	row := q.db.QueryRow(ctx, globalRating, filmID)
+	var i GlobalRatingRow
+	err := row.Scan(&i.AvgRating, &i.SampleSize)
+	return i, err
+}
+
+const tribeRating = `-- name: TribeRating :one
+SELECT avg_rating::float8, sample_size FROM tribe_rating($1,$2)
+`
+
+type TribeRatingParams struct {
+	FilmID  int64  `json:"film_id"`
+	TribeID string `json:"tribe_id"`
+}
+type TribeRatingRow struct {
+	AvgRating  *float64 `json:"avg_rating"`
+	SampleSize int64    `json:"sample_size"`
+}
+
+func (q *Queries) TribeRating(ctx context.Context, arg TribeRatingParams) (TribeRatingRow, error) {
+	row := q.db.QueryRow(ctx, tribeRating, arg.FilmID, arg.TribeID)
+	var i TribeRatingRow
+	err := row.Scan(&i.AvgRating, &i.SampleSize)
+	return i, err
 }

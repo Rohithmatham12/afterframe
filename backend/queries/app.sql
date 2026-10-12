@@ -8,28 +8,102 @@ INSERT INTO profiles(id,username) VALUES($1::uuid,$2::text) ON CONFLICT(id) DO U
 SELECT to_jsonb(p.*) FROM profiles p WHERE id=viewer_id();
 
 -- name: SaveProfile :one
-UPDATE profiles SET username=sqlc.arg(data)::jsonb->>'username', name=sqlc.arg(data)::jsonb->>'name', bio=sqlc.arg(data)::jsonb->>'bio', private=(sqlc.arg(data)::jsonb->>'private')::boolean, resurface=(sqlc.arg(data)::jsonb->>'resurface')::boolean WHERE id=viewer_id() RETURNING to_jsonb(profiles.*);
+UPDATE profiles SET username=sqlc.arg(data)::jsonb->>'username', name=sqlc.arg(data)::jsonb->>'name', bio=sqlc.arg(data)::jsonb->>'bio', private=(sqlc.arg(data)::jsonb->>'private')::boolean, resurface=(sqlc.arg(data)::jsonb->>'resurface')::boolean, notify_availability=(sqlc.arg(data)::jsonb->>'notify_availability')::boolean, family_policy=coalesce(sqlc.arg(data)::jsonb->>'family_policy',family_policy), family_region=coalesce(nullif(sqlc.arg(data)::jsonb->>'family_region',''),family_region) WHERE id=viewer_id() RETURNING to_jsonb(profiles.*);
+
+-- name: UsernameTaken :one
+SELECT username_taken($1::text);
+
+-- name: SaveQuizResponses :exec
+INSERT INTO taste_quiz_responses(user_id,film_id,response)
+ SELECT viewer_id(), f, r FROM unnest($1::bigint[], $2::text[]) AS u(f,r)
+ ON CONFLICT(user_id,film_id) DO UPDATE SET response=excluded.response,created_at=now();
+
+-- name: MarkQuizCompleted :one
+UPDATE profiles SET quiz_completed_at=now() WHERE id=viewer_id() RETURNING to_jsonb(profiles.*);
+
+-- name: QuizResponses :one
+SELECT coalesce(jsonb_agg(to_jsonb(t.*)||jsonb_build_object('film',film_card(f))),'[]'::jsonb) FROM taste_quiz_responses t JOIN films f ON f.id=t.film_id WHERE t.user_id=viewer_id();
+
+-- name: WatchedFilmIDs :one
+SELECT coalesce(jsonb_agg(DISTINCT film_id),'[]'::jsonb) FROM viewings WHERE user_id=viewer_id();
+
+-- name: Mute :exec
+INSERT INTO mutes(user_id,target_id) VALUES(viewer_id(),$1) ON CONFLICT DO NOTHING;
+
+-- name: Unmute :exec
+DELETE FROM mutes WHERE user_id=viewer_id() AND target_id=$1;
+
+-- name: MutedProfiles :one
+SELECT coalesce(jsonb_agg(to_jsonb(p.*) ORDER BY m.created_at DESC),'[]'::jsonb) FROM mutes m JOIN profiles p ON p.id=m.target_id WHERE m.user_id=viewer_id();
+
+-- name: ProfileIDByUsername :one
+SELECT id FROM profiles WHERE username=$1 AND profile_visible(id);
+
+-- name: RequestTasteShare :one
+INSERT INTO taste_shares(requester_id,partner_id) VALUES(viewer_id(),$1) RETURNING to_jsonb(taste_shares.*);
+
+-- name: RespondTasteShare :one
+UPDATE taste_shares SET status=$2,responded_at=now() WHERE id=$1 AND partner_id=viewer_id() AND status='pending' RETURNING to_jsonb(taste_shares.*);
+
+-- name: TasteShares :one
+SELECT coalesce(jsonb_agg(to_jsonb(ts.*)||jsonb_build_object(
+ 'username',CASE WHEN ts.requester_id=viewer_id() THEN partner.username ELSE requester.username END,
+ 'direction',CASE WHEN ts.requester_id=viewer_id() THEN 'sent' ELSE 'received' END
+) ORDER BY ts.created_at DESC),'[]'::jsonb)
+FROM taste_shares ts
+JOIN profiles requester ON requester.id=ts.requester_id
+JOIN profiles partner ON partner.id=ts.partner_id
+WHERE ts.requester_id=viewer_id() OR ts.partner_id=viewer_id();
+
+-- name: SharedTaste :one
+SELECT shared_taste($1::uuid);
+
+-- name: TasteShareAccepted :one
+SELECT EXISTS(SELECT 1 FROM taste_shares WHERE status='accepted' AND ((requester_id=viewer_id() AND partner_id=$1) OR (requester_id=$1 AND partner_id=viewer_id())));
+
+-- name: GetFilmAvailability :one
+SELECT providers, source, fetched_at FROM film_availability WHERE film_id=$1 AND region=$2;
+
+-- name: SetFilmAvailability :exec
+INSERT INTO film_availability(film_id,region,providers,source,fetched_at) VALUES($1,$2,$3,$4,now())
+ ON CONFLICT(film_id,region) DO UPDATE SET providers=excluded.providers,source=excluded.source,fetched_at=now();
+
+-- name: NotifyAvailabilityChange :exec
+INSERT INTO availability_alerts(user_id,film_id,region,provider,change)
+ SELECT w.user_id,$1,$2,$3,$4 FROM watchlist w JOIN profiles p ON p.id=w.user_id WHERE w.film_id=$1 AND p.notify_availability;
+
+-- name: AvailabilityAlerts :one
+SELECT coalesce(jsonb_agg(to_jsonb(a.*)||jsonb_build_object('film',film_card(f)) ORDER BY a.created_at DESC),'[]'::jsonb) FROM (SELECT * FROM availability_alerts WHERE user_id=viewer_id() ORDER BY created_at DESC LIMIT 50) a JOIN films f ON f.id=a.film_id;
+
+-- name: ReadAvailabilityAlerts :exec
+UPDATE availability_alerts SET read=true WHERE user_id=viewer_id();
 
 -- name: UpsertFilm :one
-INSERT INTO films(id,title,year,poster,backdrop,overview,genres,director,runtime,cast_members,crew) SELECT (d->>'id')::bigint,d->>'title',d->>'year',d->>'poster',d->>'backdrop',d->>'overview',ARRAY(SELECT jsonb_array_elements_text(d->'genres')),d->>'director',(d->>'runtime')::int,coalesce(nullif(d->'cast_members','null'::jsonb),'[]'::jsonb),coalesce(nullif(d->'crew','null'::jsonb),'[]'::jsonb) FROM (SELECT $1::jsonb d) x ON CONFLICT(id) DO UPDATE SET title=excluded.title,year=excluded.year,poster=excluded.poster,backdrop=excluded.backdrop,overview=excluded.overview,genres=excluded.genres,director=excluded.director,runtime=excluded.runtime,cast_members=excluded.cast_members,crew=excluded.crew,cached_at=now() RETURNING to_jsonb(films.*);
+INSERT INTO films(id,title,year,poster,backdrop,overview,genres,director,runtime,cast_members,crew,certifications,vote_average,vote_count,original_language,tmdb_reviews) SELECT (d->>'id')::bigint,d->>'title',d->>'year',d->>'poster',d->>'backdrop',d->>'overview',ARRAY(SELECT jsonb_array_elements_text(d->'genres')),d->>'director',(d->>'runtime')::int,coalesce(nullif(d->'cast_members','null'::jsonb),'[]'::jsonb),coalesce(nullif(d->'crew','null'::jsonb),'[]'::jsonb),coalesce(nullif(d->'certifications','null'::jsonb),'{}'::jsonb),coalesce((d->>'vote_average')::numeric,0),coalesce((d->>'vote_count')::int,0),coalesce(d->>'original_language',''),coalesce(nullif(d->'tmdb_reviews','null'::jsonb),'[]'::jsonb) FROM (SELECT $1::jsonb d) x ON CONFLICT(id) DO UPDATE SET title=excluded.title,year=excluded.year,poster=excluded.poster,backdrop=excluded.backdrop,overview=excluded.overview,genres=excluded.genres,director=excluded.director,runtime=excluded.runtime,cast_members=excluded.cast_members,crew=excluded.crew,certifications=excluded.certifications,vote_average=excluded.vote_average,vote_count=excluded.vote_count,original_language=excluded.original_language,tmdb_reviews=excluded.tmdb_reviews,cached_at=now() RETURNING to_jsonb(films.*);
 
 -- name: Film :one
 SELECT to_jsonb(f.*) FROM films f WHERE id=$1 AND cached_at>now()-interval '1 day';
 
 -- name: AddViewing :one
-INSERT INTO viewings(user_id,film_id,watched_on,rating,notes,rewatch,private,request_id) SELECT viewer_id(),(d->>'film_id')::bigint,(d->>'watched_on')::date,(d->>'rating')::numeric,d->>'notes',(d->>'rewatch')::boolean,(d->>'private')::boolean,(d->>'request_id')::uuid FROM (SELECT $1::jsonb d) x ON CONFLICT(user_id,request_id) DO NOTHING RETURNING to_jsonb(viewings.*);
+INSERT INTO viewings(user_id,film_id,watched_on,rating,notes,rewatch,private,request_id,context) SELECT viewer_id(),(d->>'film_id')::bigint,(d->>'watched_on')::date,(d->>'rating')::numeric,d->>'notes',(d->>'rewatch')::boolean,(d->>'private')::boolean,(d->>'request_id')::uuid,coalesce(d->>'viewing_context','') FROM (SELECT $1::jsonb d) x ON CONFLICT(user_id,request_id) DO NOTHING RETURNING to_jsonb(viewings.*);
 
 -- name: ExistingViewing :one
 SELECT to_jsonb(v.*) FROM viewings v WHERE user_id=viewer_id() AND request_id=$1;
 
 -- name: EditViewing :one
-UPDATE viewings SET watched_on=(d->>'watched_on')::date,rating=(d->>'rating')::numeric,notes=d->>'notes',rewatch=(d->>'rewatch')::boolean,private=(d->>'private')::boolean FROM (SELECT $1::jsonb d) x WHERE id=(d->>'id')::uuid AND user_id=viewer_id() RETURNING to_jsonb(viewings.*);
+UPDATE viewings SET watched_on=(d->>'watched_on')::date,rating=(d->>'rating')::numeric,notes=d->>'notes',rewatch=(d->>'rewatch')::boolean,private=(d->>'private')::boolean,context=coalesce(d->>'viewing_context','') FROM (SELECT $1::jsonb d) x WHERE id=(d->>'id')::uuid AND user_id=viewer_id() RETURNING to_jsonb(viewings.*);
 
 -- name: DeleteViewing :one
 DELETE FROM viewings WHERE id=$1 AND user_id=viewer_id() RETURNING to_jsonb(viewings.*);
 
 -- name: Diary :one
-SELECT coalesce(jsonb_agg(item ORDER BY watched_on DESC,created_at DESC),'[]'::jsonb) FROM (SELECT to_jsonb(v.*)||jsonb_build_object('film',film_card(f)) item,v.watched_on,v.created_at FROM viewings v JOIN films f ON f.id=v.film_id WHERE v.user_id=viewer_id() AND ($1::text='' OR to_char(v.watched_on,'YYYY-MM')=$1) ORDER BY v.watched_on DESC,v.created_at DESC LIMIT 50 OFFSET $2) x;
+SELECT coalesce(jsonb_agg(item ORDER BY watched_on DESC,created_at DESC),'[]'::jsonb) FROM (SELECT to_jsonb(v.*)||jsonb_build_object('film',film_card(f),'feelings',coalesce((SELECT jsonb_agg(feeling ORDER BY feeling) FROM viewing_feelings vf WHERE vf.viewing_id=v.id),'[]'::jsonb)) item,v.watched_on,v.created_at FROM viewings v JOIN films f ON f.id=v.film_id WHERE v.user_id=viewer_id() AND ($1::text='' OR to_char(v.watched_on,'YYYY-MM')=$1) ORDER BY v.watched_on DESC,v.created_at DESC LIMIT 50 OFFSET $2) x;
+
+-- name: DeleteViewingFeelings :exec
+DELETE FROM viewing_feelings WHERE viewing_id=$1;
+
+-- name: AddViewingFeelings :exec
+INSERT INTO viewing_feelings(viewing_id,feeling) SELECT $1,unnest($2::text[]) ON CONFLICT DO NOTHING;
 
 -- name: AddOpinion :one
 INSERT INTO opinions(user_id,film_id,viewing_id,rating,reflection,kind) SELECT viewer_id(),(d->>'film_id')::bigint,nullif(d->>'viewing_id','')::uuid,(d->>'rating')::numeric,d->>'reflection',d->>'kind' FROM (SELECT $1::jsonb d) x RETURNING to_jsonb(opinions.*);
@@ -55,7 +129,7 @@ SELECT coalesce(jsonb_agg(item ORDER BY score DESC,watched_on DESC),'[]'::jsonb)
 SELECT coalesce(jsonb_agg(item),'[]'::jsonb) FROM (SELECT (to_jsonb(m.*)-'search')||jsonb_build_object('film',film_card(f),'watched_on',v.watched_on,'explanation','A memory from an earlier chapter') item FROM memories m JOIN viewings v ON v.id=m.viewing_id JOIN films f ON f.id=v.film_id JOIN profiles p ON p.id=m.user_id WHERE m.user_id=viewer_id() AND p.resurface AND v.watched_on<current_date-interval '30 days' ORDER BY abs(extract(doy FROM v.watched_on)-extract(doy FROM current_date)),v.watched_on DESC LIMIT 3) x;
 
 -- name: SaveReview :one
-INSERT INTO reviews(id,user_id,film_id,safe,watched,reflection) SELECT coalesce(nullif(d->>'id','')::uuid,gen_random_uuid()),viewer_id(),(d->>'film_id')::bigint,d->>'safe',d->>'watched',d->>'reflection' FROM (SELECT $1::jsonb d) x ON CONFLICT(id) DO UPDATE SET safe=excluded.safe,watched=excluded.watched,reflection=excluded.reflection,updated_at=now() WHERE reviews.user_id=viewer_id() RETURNING to_jsonb(reviews.*);
+INSERT INTO reviews(id,user_id,film_id,safe,watched,reflection,tone) SELECT coalesce(nullif(d->>'id','')::uuid,gen_random_uuid()),viewer_id(),(d->>'film_id')::bigint,d->>'safe',d->>'watched',d->>'reflection',coalesce(d->>'tone','') FROM (SELECT $1::jsonb d) x ON CONFLICT(id) DO UPDATE SET safe=excluded.safe,watched=excluded.watched,reflection=excluded.reflection,tone=excluded.tone,updated_at=now() WHERE reviews.user_id=viewer_id() RETURNING to_jsonb(reviews.*);
 
 -- name: DeleteReview :one
 DELETE FROM reviews WHERE id=$1 AND user_id=viewer_id() RETURNING to_jsonb(reviews.*);
@@ -63,7 +137,7 @@ DELETE FROM reviews WHERE id=$1 AND user_id=viewer_id() RETURNING to_jsonb(revie
 -- name: ReadReviews :one
 SELECT coalesce(jsonb_agg(item ORDER BY created_at DESC),'[]'::jsonb) FROM (
  SELECT to_jsonb(r.*)||jsonb_build_object('film',film_card(f),'username',p.username,'likes',(SELECT count(*) FROM review_likes WHERE review_id=r.id),'liked',EXISTS(SELECT 1 FROM review_likes WHERE review_id=r.id AND user_id=viewer_id()),'allowed_layer',CASE WHEN r.user_id=viewer_id() THEN 3 ELSE greatest(coalesce((SELECT layer FROM reveals WHERE user_id=viewer_id() AND film_id=r.film_id),1),CASE WHEN EXISTS(SELECT 1 FROM viewings WHERE user_id=viewer_id() AND film_id=r.film_id) THEN 2 ELSE 1 END) END) item,r.created_at
- FROM reviews r JOIN profiles p ON p.id=r.user_id JOIN films f ON f.id=r.film_id WHERE profile_visible(r.user_id) AND ($1::bigint=0 OR r.film_id=$1) AND ($2::boolean=false OR r.user_id=viewer_id() OR EXISTS(SELECT 1 FROM follows WHERE user_id=viewer_id() AND target_id=r.user_id)) ORDER BY r.created_at DESC LIMIT 30 OFFSET $3) x;
+ FROM reviews r JOIN profiles p ON p.id=r.user_id JOIN films f ON f.id=r.film_id WHERE profile_visible(r.user_id) AND ($1::bigint=0 OR r.film_id=$1) AND ($2::boolean=false OR r.user_id=viewer_id() OR EXISTS(SELECT 1 FROM follows WHERE user_id=viewer_id() AND target_id=r.user_id)) AND ($4::text='' OR r.tone=$4) AND NOT EXISTS(SELECT 1 FROM mutes WHERE user_id=viewer_id() AND target_id=r.user_id) ORDER BY r.created_at DESC LIMIT 30 OFFSET $3) x;
 
 -- name: ReviewAccess :one
 SELECT to_jsonb(r.*)||jsonb_build_object('allowed_layer',CASE WHEN r.user_id=viewer_id() THEN 3 ELSE greatest(coalesce((SELECT layer FROM reveals WHERE user_id=viewer_id() AND film_id=r.film_id),1),CASE WHEN EXISTS(SELECT 1 FROM viewings WHERE user_id=viewer_id() AND film_id=r.film_id) THEN 2 ELSE 1 END) END) FROM reviews r WHERE r.id=$1 AND profile_visible(r.user_id);
@@ -72,13 +146,13 @@ SELECT to_jsonb(r.*)||jsonb_build_object('allowed_layer',CASE WHEN r.user_id=vie
 INSERT INTO reveals(user_id,film_id,layer) VALUES(viewer_id(),$1,$2) ON CONFLICT(user_id,film_id) DO UPDATE SET layer=excluded.layer RETURNING to_jsonb(reveals.*);
 
 -- name: SetWatchlist :one
-INSERT INTO watchlist(user_id,film_id,private) VALUES(viewer_id(),$1,$2) ON CONFLICT(user_id,film_id) DO UPDATE SET private=excluded.private RETURNING to_jsonb(watchlist.*);
+INSERT INTO watchlist(user_id,film_id,private,intent,intent_note) VALUES(viewer_id(),$1,$2,$3,$4) ON CONFLICT(user_id,film_id) DO UPDATE SET private=excluded.private,intent=excluded.intent,intent_note=excluded.intent_note RETURNING to_jsonb(watchlist.*);
 
 -- name: RemoveWatchlist :exec
 DELETE FROM watchlist WHERE user_id=viewer_id() AND film_id=$1;
 
 -- name: Watchlist :one
-SELECT coalesce(jsonb_agg(to_jsonb(w.*)||jsonb_build_object('film',film_card(f)) ORDER BY w.created_at DESC),'[]'::jsonb) FROM (SELECT * FROM watchlist WHERE user_id=viewer_id() ORDER BY created_at DESC LIMIT 50 OFFSET $1) w JOIN films f ON f.id=w.film_id;
+SELECT coalesce(jsonb_agg(to_jsonb(w.*)||jsonb_build_object('film',film_card(f)) ORDER BY w.created_at DESC),'[]'::jsonb) FROM (SELECT * FROM watchlist WHERE user_id=viewer_id() AND ($1::text='' OR intent=$1) ORDER BY created_at DESC LIMIT 50 OFFSET $2) w JOIN films f ON f.id=w.film_id;
 
 -- name: SaveList :one
 INSERT INTO lists(id,user_id,title,description,private,ranked) SELECT coalesce(nullif(d->>'id','')::uuid,gen_random_uuid()),viewer_id(),d->>'title',d->>'description',(d->>'private')::boolean,(d->>'ranked')::boolean FROM (SELECT $1::jsonb d) x ON CONFLICT(id) DO UPDATE SET title=excluded.title,description=excluded.description,private=excluded.private,ranked=excluded.ranked WHERE lists.user_id=viewer_id() RETURNING to_jsonb(lists.*);
@@ -175,3 +249,81 @@ UPDATE deleted_accounts SET auth_deleted=true WHERE user_id=$1;
 
 -- name: ListAccess :one
 SELECT id FROM lists WHERE id=$1;
+
+-- name: SaveProgress :one
+INSERT INTO viewing_progress(user_id,film_id,status,progress_minutes,reason) SELECT viewer_id(),(d->>'film_id')::bigint,d->>'status',nullif(d->>'progress_minutes','')::int,nullif(d->>'reason','') FROM (SELECT $1::jsonb d) x ON CONFLICT(user_id,film_id) DO UPDATE SET status=excluded.status,progress_minutes=excluded.progress_minutes,reason=excluded.reason,updated_at=now() RETURNING to_jsonb(viewing_progress.*);
+
+-- name: Progress :one
+SELECT coalesce(jsonb_agg(to_jsonb(vp.*)||jsonb_build_object('film',film_card(f)) ORDER BY vp.updated_at DESC),'[]'::jsonb) FROM viewing_progress vp JOIN films f ON f.id=vp.film_id WHERE vp.user_id=viewer_id();
+
+-- name: ClearProgress :exec
+DELETE FROM viewing_progress WHERE user_id=viewer_id() AND film_id=$1;
+
+-- name: UnresolvedProgressFilmIDs :one
+SELECT coalesce(jsonb_agg(DISTINCT film_id),'[]'::jsonb) FROM viewing_progress WHERE user_id=viewer_id() AND status IN ('paused','abandoned');
+
+-- name: SaveCraftNote :one
+INSERT INTO craft_notes(id,user_id,film_id,viewing_id,category,scene,body,spoiler,private) SELECT coalesce(nullif(d->>'id','')::uuid,gen_random_uuid()),viewer_id(),(d->>'film_id')::bigint,v.id,d->>'category',coalesce(d->>'scene',''),coalesce(d->>'body',''),coalesce((d->>'spoiler')::boolean,false),coalesce((d->>'private')::boolean,true) FROM (SELECT $1::jsonb d) x LEFT JOIN viewings v ON v.id=nullif(d->>'viewing_id','')::uuid AND v.user_id=viewer_id() AND v.film_id=(d->>'film_id')::bigint WHERE nullif(d->>'viewing_id','') IS NULL OR v.id IS NOT NULL ON CONFLICT(id) DO UPDATE SET film_id=excluded.film_id,viewing_id=excluded.viewing_id,category=excluded.category,scene=excluded.scene,body=excluded.body,spoiler=excluded.spoiler,private=excluded.private,updated_at=now() WHERE craft_notes.user_id=viewer_id() RETURNING (to_jsonb(craft_notes.*)-'search');
+
+-- name: CraftNotesForFilm :one
+SELECT coalesce(jsonb_agg((to_jsonb(c.*)-'search')||jsonb_build_object('username',p.username,'allowed_spoiler',c.user_id=viewer_id() OR NOT c.spoiler OR coalesce((SELECT layer FROM reveals WHERE user_id=viewer_id() AND film_id=c.film_id),1)>=2 OR EXISTS(SELECT 1 FROM viewings WHERE user_id=viewer_id() AND film_id=c.film_id)) ORDER BY c.created_at DESC),'[]'::jsonb) FROM craft_notes c JOIN profiles p ON p.id=c.user_id WHERE c.film_id=$1 AND (c.user_id=viewer_id() OR (NOT c.private AND profile_visible(c.user_id)));
+
+-- name: SearchCraftNotes :one
+SELECT coalesce(jsonb_agg((to_jsonb(c.*)-'search')||jsonb_build_object('film',film_card(f)) ORDER BY c.created_at DESC),'[]'::jsonb) FROM craft_notes c JOIN films f ON f.id=c.film_id WHERE c.user_id=viewer_id() AND ($1::text='' OR c.search @@ websearch_to_tsquery('english',$1) OR (c.scene||' '||c.body||' '||c.category) ILIKE '%'||$1||'%') LIMIT 200;
+
+-- name: DeleteCraftNote :one
+DELETE FROM craft_notes WHERE id=$1 AND user_id=viewer_id() RETURNING (to_jsonb(craft_notes.*)-'search');
+
+-- name: CreatePlan :one
+INSERT INTO theatrical_plans(film_id,creator_id,note) VALUES($1,viewer_id(),$2) RETURNING to_jsonb(theatrical_plans.*);
+
+-- name: JoinOwnPlan :exec
+INSERT INTO plan_participants(plan_id,user_id,status) VALUES($1,viewer_id(),'joined') ON CONFLICT DO NOTHING;
+
+-- name: AddPlanSlot :one
+INSERT INTO plan_slots(plan_id,label) SELECT $1,$2 WHERE EXISTS(SELECT 1 FROM theatrical_plans WHERE id=$1 AND creator_id=viewer_id()) RETURNING to_jsonb(plan_slots.*);
+
+-- name: InvitePlanParticipant :one
+INSERT INTO plan_participants(plan_id,user_id) SELECT $1,$2 WHERE EXISTS(SELECT 1 FROM theatrical_plans WHERE id=$1 AND creator_id=viewer_id()) ON CONFLICT DO NOTHING RETURNING to_jsonb(plan_participants.*);
+
+-- name: RespondPlanInvite :one
+UPDATE plan_participants SET status=$2 WHERE plan_id=$1 AND user_id=viewer_id() RETURNING to_jsonb(plan_participants.*);
+
+-- name: VoteSlot :exec
+INSERT INTO plan_votes(slot_id,user_id) SELECT $1,viewer_id() WHERE EXISTS(SELECT 1 FROM plan_participants pp JOIN plan_slots s ON s.plan_id=pp.plan_id WHERE s.id=$1 AND pp.user_id=viewer_id() AND pp.status='joined') ON CONFLICT DO NOTHING;
+
+-- name: UnvoteSlot :exec
+DELETE FROM plan_votes WHERE slot_id=$1 AND user_id=viewer_id();
+
+-- name: DecidePlan :one
+UPDATE theatrical_plans SET status='decided',decided_slot_id=$2,updated_at=now() WHERE id=$1 AND creator_id=viewer_id() AND EXISTS(SELECT 1 FROM plan_slots WHERE id=$2 AND plan_id=$1) RETURNING to_jsonb(theatrical_plans.*);
+
+-- name: CancelPlan :one
+UPDATE theatrical_plans SET status='cancelled',updated_at=now() WHERE id=$1 AND creator_id=viewer_id() RETURNING to_jsonb(theatrical_plans.*);
+
+-- name: MyPlans :one
+SELECT coalesce(jsonb_agg(to_jsonb(p.*)||jsonb_build_object('film',film_card(f)) ORDER BY p.created_at DESC),'[]'::jsonb) FROM theatrical_plans p JOIN films f ON f.id=p.film_id WHERE p.creator_id=viewer_id() OR EXISTS(SELECT 1 FROM plan_participants pp WHERE pp.plan_id=p.id AND pp.user_id=viewer_id());
+
+-- name: PlanDetail :one
+SELECT to_jsonb(p.*)||jsonb_build_object('film',film_card(f)) FROM theatrical_plans p JOIN films f ON f.id=p.film_id WHERE p.id=$1;
+
+-- name: PlanSlots :one
+SELECT coalesce(jsonb_agg(to_jsonb(s.*)||jsonb_build_object('votes',(SELECT count(*) FROM plan_votes v WHERE v.slot_id=s.id),'voted',EXISTS(SELECT 1 FROM plan_votes v WHERE v.slot_id=s.id AND v.user_id=viewer_id())) ORDER BY s.created_at),'[]'::jsonb) FROM plan_slots s WHERE s.plan_id=$1;
+
+-- name: PlanParticipants :one
+SELECT plan_roster($1::uuid);
+
+-- name: JoinTribe :exec
+INSERT INTO user_tribes(user_id,tribe_id) VALUES(viewer_id(),$1) ON CONFLICT DO NOTHING;
+
+-- name: LeaveTribe :exec
+DELETE FROM user_tribes WHERE user_id=viewer_id() AND tribe_id=$1;
+
+-- name: MyTribes :one
+SELECT coalesce(jsonb_agg(tribe_id),'[]'::jsonb) FROM user_tribes WHERE user_id=viewer_id();
+
+-- name: GlobalRating :one
+SELECT avg_rating::float8, sample_size FROM global_rating($1);
+
+-- name: TribeRating :one
+SELECT avg_rating::float8, sample_size FROM tribe_rating($1,$2);
