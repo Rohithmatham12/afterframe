@@ -322,6 +322,27 @@ export function ProgressTracker({
     );
   }
 
+  if (current?.status === 'started' && !editing) {
+    return (
+      <div className="stack chip">
+        <span>Watching</span>
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="row">
+          <button disabled={saving} onClick={() => setEditing('paused')}>
+            Paused
+          </button>
+          <button disabled={saving} onClick={() => setEditing('abandoned')}>
+            Abandoned
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (editing) {
     return (
       <div className="stack">
@@ -1119,9 +1140,34 @@ export function TasteQuiz({
   const film = films[index];
   const answered = Object.keys(answers).length;
 
+  async function finish(finalAnswers: Record<number, string>) {
+    setSaving(true);
+    setError('');
+    try {
+      await result(
+        await api.POST('/v1/quiz', {
+          body: Object.entries(finalAnswers).map(([filmId, response]) => ({
+            film_id: Number(filmId),
+            response,
+          })),
+        })
+      );
+      onSaved?.();
+      setTasteMap(await result(await api.GET('/v1/taste-map')));
+    } catch (e) {
+      setError(message(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
   function pick(response: string) {
-    setAnswers((a) => ({ ...a, [film.id]: response }));
+    const next = { ...answers, [film.id]: response };
+    setAnswers(next);
+    // The last question has nowhere left to advance to — finish right away
+    // instead of leaving the screen looking unchanged after the tap.
     if (index < films!.length - 1) setIndex(index + 1);
+    else finish(next);
   }
 
   return (
@@ -1167,26 +1213,7 @@ export function TasteQuiz({
           <button
             className="primary"
             disabled={saving}
-            onClick={async () => {
-              setSaving(true);
-              setError('');
-              try {
-                await result(
-                  await api.POST('/v1/quiz', {
-                    body: Object.entries(answers).map(([filmId, response]) => ({
-                      film_id: Number(filmId),
-                      response,
-                    })),
-                  })
-                );
-                onSaved?.();
-                setTasteMap(await result(await api.GET('/v1/taste-map')));
-              } catch (e) {
-                setError(message(e));
-              } finally {
-                setSaving(false);
-              }
-            }}
+            onClick={() => finish(answers)}
           >
             {saving ? 'Saving…' : 'Finish quiz'}
           </button>

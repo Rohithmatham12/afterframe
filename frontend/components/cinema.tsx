@@ -1075,29 +1075,41 @@ export default function Cinema({
                           Log this film
                         </button>
                         <button
+                          aria-pressed={!!filmState?.watchlisted}
                           onClick={async () => {
                             if (!session) {
                               edit('auth');
                               return;
                             }
+                            const onList = !!filmState?.watchlisted;
                             try {
                               result(
                                 await api.POST('/v1/watchlist', {
                                   body: {
                                     film_id: film.id,
-                                    enabled: true,
+                                    enabled: !onList,
                                     private: profile?.private || false,
                                   },
                                 })
                               );
-                              notify('Added to your watchlist');
+                              setFilmState((s) =>
+                                s ? { ...s, watchlisted: !onList } : s
+                              );
+                              notify(
+                                onList
+                                  ? 'Removed from your watchlist'
+                                  : 'Added to your watchlist'
+                              );
                             } catch (e) {
                               notify(message(e));
                             }
                           }}
                         >
-                          <Bookmark size={16} />
-                          Watchlist
+                          <Bookmark
+                            size={16}
+                            fill={filmState?.watchlisted ? 'currentColor' : 'none'}
+                          />
+                          {filmState?.watchlisted ? 'On your watchlist' : 'Watchlist'}
                         </button>
                         <button onClick={() => requireAuth('review', film)}>
                           Write review

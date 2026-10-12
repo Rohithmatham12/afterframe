@@ -414,6 +414,11 @@ main {
   color: var(--text);
   border-bottom-color: var(--accent);
 }
+.film-detail button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
 .search {
   display: flex;
   align-items: center;
