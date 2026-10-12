@@ -70,6 +70,13 @@ var allowedCraftCategories = map[string]bool{
 // CHECK constraint.
 var allowedFamilyPolicies = map[string]bool{"": true, "strict": true, "standard": true}
 
+// GAP 11: a diary entry's visibility — "Followers," not "Friends," since
+// this app only has a one-way follow relationship. "" is treated the same
+// as "private" (the conservative default), mirrored by the SQL-level
+// coalesce in SaveProfile/AddViewing/EditViewing so the default holds even
+// if a caller skips this field entirely.
+var allowedVisibility = map[string]bool{"": true, "private": true, "followers": true, "public": true}
+
 var regionPattern = regexp.MustCompile(`^[A-Z]{2}$`)
 var usernamePattern = regexp.MustCompile(`^[a-z0-9_]{3,30}$`)
 var reservedUsernames = map[string]bool{
@@ -138,6 +145,10 @@ type Input struct {
 	// (solo, date_night, friends, family, kids) captured at log time.
 	ViewingContext string `json:"viewing_context"`
 	Tone           string `json:"tone"`
+	// Visibility is GAP 11's 3-tier Private/Followers/Public model for a
+	// diary entry. Private (the existing binary Private bool, still used by
+	// watchlist/lists) is unrelated to this field.
+	Visibility string `json:"visibility"`
 	// Status and ProgressMinutes are GAP 20 (abandonment tracking): a
 	// partial-viewing signal stored separately from a completed watch, so an
 	// abandoned film is never counted as finished and never automatically
@@ -1118,6 +1129,9 @@ func Validate(area string, in Input) error {
 		}
 		if !allowedContexts[in.ViewingContext] {
 			return fmt.Errorf("%w: unrecognized viewing context %q", ErrInvalid, in.ViewingContext)
+		}
+		if !allowedVisibility[in.Visibility] {
+			return fmt.Errorf("%w: unrecognized visibility %q", ErrInvalid, in.Visibility)
 		}
 	}
 	if area == "reviews" && !allowedTones[in.Tone] {

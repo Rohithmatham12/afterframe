@@ -44,6 +44,17 @@ export const VIEWING_CONTEXTS = [
 export const contextLabel = (value: string) =>
   VIEWING_CONTEXTS.find((c) => c.value === value)?.label || value;
 
+// GAP 11: "Followers," not "Friends" — this app only has a one-way follow
+// relationship. Mirrors migration 000022_entry_visibility.up.sql's CHECK.
+export const VISIBILITY_OPTIONS = [
+  { value: 'private', label: 'Private — only you' },
+  { value: 'followers', label: 'Followers' },
+  { value: 'public', label: 'Public' },
+] as const;
+
+export const visibilityLabel = (value: string) =>
+  VISIBILITY_OPTIONS.find((v) => v.value === value)?.label || value;
+
 export const REVIEW_TONES = [
   { value: '', label: 'All' },
   { value: 'insightful', label: 'Insightful' },

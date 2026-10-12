@@ -269,3 +269,16 @@ func TestResurfaceExplanationIsHonestNeverFabricated(t *testing.T) {
 		t.Fatalf("expected safe fallback for an unparseable date, got %q", e)
 	}
 }
+
+func TestVisibilityValidation(t *testing.T) {
+	for _, v := range []string{"", "private", "followers", "public"} {
+		if e := Validate("diary", validDiaryInput(func(in *Input) { in.Visibility = v })); e != nil {
+			t.Errorf("rejected documented visibility %q: %v", v, e)
+		}
+	}
+	if Validate("diary", validDiaryInput(func(in *Input) {
+		in.Visibility = "friends"
+	})) == nil {
+		t.Fatal("accepted \"friends\" — this app only has one-way follows, must use \"followers\"")
+	}
+}

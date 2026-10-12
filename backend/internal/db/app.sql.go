@@ -66,7 +66,7 @@ func (q *Queries) AddOpinion(ctx context.Context, dollar_1 []byte) ([]byte, erro
 }
 
 const addViewing = `-- name: AddViewing :one
-INSERT INTO viewings(user_id,film_id,watched_on,rating,notes,rewatch,private,request_id,context) SELECT viewer_id(),(d->>'film_id')::bigint,(d->>'watched_on')::date,(d->>'rating')::numeric,d->>'notes',(d->>'rewatch')::boolean,(d->>'private')::boolean,(d->>'request_id')::uuid,coalesce(d->>'viewing_context','') FROM (SELECT $1::jsonb d) x ON CONFLICT(user_id,request_id) DO NOTHING RETURNING to_jsonb(viewings.*)
+INSERT INTO viewings(user_id,film_id,watched_on,rating,notes,rewatch,visibility,request_id,context) SELECT viewer_id(),(d->>'film_id')::bigint,(d->>'watched_on')::date,(d->>'rating')::numeric,d->>'notes',(d->>'rewatch')::boolean,coalesce(nullif(d->>'visibility',''),'private'),(d->>'request_id')::uuid,coalesce(d->>'viewing_context','') FROM (SELECT $1::jsonb d) x ON CONFLICT(user_id,request_id) DO NOTHING RETURNING to_jsonb(viewings.*)
 `
 
 func (q *Queries) AddViewing(ctx context.Context, dollar_1 []byte) ([]byte, error) {
@@ -216,7 +216,7 @@ func (q *Queries) AddViewingFeelings(ctx context.Context, viewingID pgtype.UUID,
 }
 
 const editViewing = `-- name: EditViewing :one
-UPDATE viewings SET watched_on=(d->>'watched_on')::date,rating=(d->>'rating')::numeric,notes=d->>'notes',rewatch=(d->>'rewatch')::boolean,private=(d->>'private')::boolean,context=coalesce(d->>'viewing_context','') FROM (SELECT $1::jsonb d) x WHERE id=(d->>'id')::uuid AND user_id=viewer_id() RETURNING to_jsonb(viewings.*)
+UPDATE viewings SET watched_on=(d->>'watched_on')::date,rating=(d->>'rating')::numeric,notes=d->>'notes',rewatch=(d->>'rewatch')::boolean,visibility=coalesce(nullif(d->>'visibility',''),'private'),context=coalesce(d->>'viewing_context','') FROM (SELECT $1::jsonb d) x WHERE id=(d->>'id')::uuid AND user_id=viewer_id() RETURNING to_jsonb(viewings.*)
 `
 
 func (q *Queries) EditViewing(ctx context.Context, dollar_1 []byte) ([]byte, error) {
@@ -421,7 +421,7 @@ func (q *Queries) PendingErasures(ctx context.Context) ([]pgtype.UUID, error) {
 }
 
 const profileDetails = `-- name: ProfileDetails :one
-SELECT to_jsonb(p.*)||jsonb_build_object('followers',(SELECT count(*) FROM follows WHERE target_id=p.id),'following',(SELECT count(*) FROM follows WHERE user_id=p.id),'viewings',(SELECT count(*) FROM viewings WHERE user_id=p.id),'diary',coalesce((SELECT jsonb_agg(to_jsonb(v.*)||jsonb_build_object('film',film_card(f)) ORDER BY v.watched_on DESC) FROM (SELECT id, user_id, film_id, watched_on, rating, notes, rewatch, private, request_id, created_at FROM viewings WHERE user_id=p.id AND (NOT private OR p.id=viewer_id()) ORDER BY watched_on DESC,created_at DESC LIMIT 50) v JOIN films f ON f.id=v.film_id),'[]'::jsonb)) FROM profiles p WHERE p.id=$1 AND profile_visible(p.id)
+SELECT to_jsonb(p.*)||jsonb_build_object('followers',(SELECT count(*) FROM follows WHERE target_id=p.id),'following',(SELECT count(*) FROM follows WHERE user_id=p.id),'viewings',(SELECT count(*) FROM viewings WHERE user_id=p.id),'diary',coalesce((SELECT jsonb_agg(to_jsonb(v.*)||jsonb_build_object('film',film_card(f)) ORDER BY v.watched_on DESC) FROM (SELECT id, user_id, film_id, watched_on, rating, notes, rewatch, visibility, request_id, created_at FROM viewings WHERE user_id=p.id AND (p.id=viewer_id() OR visibility='public' OR (visibility='followers' AND EXISTS(SELECT 1 FROM follows WHERE user_id=viewer_id() AND target_id=p.id))) ORDER BY watched_on DESC,created_at DESC LIMIT 50) v JOIN films f ON f.id=v.film_id),'[]'::jsonb)) FROM profiles p WHERE p.id=$1 AND profile_visible(p.id)
 `
 
 func (q *Queries) ProfileDetails(ctx context.Context, id pgtype.UUID) (interface{}, error) {
@@ -432,7 +432,7 @@ func (q *Queries) ProfileDetails(ctx context.Context, id pgtype.UUID) (interface
 }
 
 const profiles = `-- name: Profiles :one
-SELECT coalesce(jsonb_agg(item),'[]'::jsonb) FROM (SELECT to_jsonb(p.*)||jsonb_build_object('following',EXISTS(SELECT 1 FROM follows WHERE user_id=viewer_id() AND target_id=p.id),'followers',(SELECT count(*) FROM follows WHERE target_id=p.id),'films',(SELECT count(*) FROM viewings WHERE user_id=p.id AND (NOT private OR p.id=viewer_id()))) item FROM profiles p WHERE profile_visible(p.id) AND (username ILIKE '%'||$1||'%' OR name ILIKE '%'||$1||'%') ORDER BY username LIMIT 50) x
+SELECT coalesce(jsonb_agg(item),'[]'::jsonb) FROM (SELECT to_jsonb(p.*)||jsonb_build_object('following',EXISTS(SELECT 1 FROM follows WHERE user_id=viewer_id() AND target_id=p.id),'followers',(SELECT count(*) FROM follows WHERE target_id=p.id),'films',(SELECT count(*) FROM viewings WHERE user_id=p.id AND (p.id=viewer_id() OR visibility='public' OR (visibility='followers' AND EXISTS(SELECT 1 FROM follows WHERE user_id=viewer_id() AND target_id=p.id))))) item FROM profiles p WHERE profile_visible(p.id) AND (username ILIKE '%'||$1||'%' OR name ILIKE '%'||$1||'%') ORDER BY username LIMIT 50) x
 `
 
 func (q *Queries) Profiles(ctx context.Context, dollar_1 pgtype.Text) (interface{}, error) {

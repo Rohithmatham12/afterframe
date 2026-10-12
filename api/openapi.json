@@ -9582,8 +9582,8 @@
           "rewatch": {
             "type": "boolean"
           },
-          "private": {
-            "type": "boolean"
+          "visibility": {
+            "type": "string"
           },
           "request_id": {
             "type": "string"
@@ -9612,7 +9612,7 @@
           "rating",
           "notes",
           "rewatch",
-          "private",
+          "visibility",
           "request_id",
           "created_at",
           "film",
@@ -10235,6 +10235,9 @@
             "type": "string"
           },
           "family_region": {
+            "type": "string"
+          },
+          "visibility": {
             "type": "string"
           },
           "film_id": {

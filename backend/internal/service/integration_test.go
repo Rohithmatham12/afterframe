@@ -62,7 +62,7 @@ func TestPostgresJourneys(t *testing.T) {
 		t.Fatal(e)
 	}
 	rating := 4.0
-	in := Input{FilmID: 550, WatchedOn: "2024-10-10", Rating: &rating, Notes: "first impression", RequestID: uuid.NewString(), Scene: "Rain on a neon window", Emotion: "unsettled", Context: "watched with college friends", Private: true}
+	in := Input{FilmID: 550, WatchedOn: "2024-10-10", Rating: &rating, Notes: "first impression", RequestID: uuid.NewString(), Scene: "Rain on a neon window", Emotion: "unsettled", Context: "watched with college friends", Visibility: "private"}
 	v, e := s.Write(ctx, a, "diary", in)
 	if e != nil {
 		t.Fatal(e)
@@ -548,7 +548,7 @@ func TestPostgresJourneys(t *testing.T) {
 		if err := s.Ensure(ctx, user); err != nil {
 			t.Fatal(err)
 		}
-		_, err := pool.Exec(ctx, `INSERT INTO viewings(user_id,film_id,watched_on,request_id,notes,private) SELECT $1,550,'2024-10-10',gen_random_uuid(),'bulk fixture '||n,true FROM generate_series(1,2000) n`, user)
+		_, err := pool.Exec(ctx, `INSERT INTO viewings(user_id,film_id,watched_on,request_id,notes,visibility) SELECT $1,550,'2024-10-10',gen_random_uuid(),'bulk fixture '||n,'private' FROM generate_series(1,2000) n`, user)
 		if err != nil {
 			t.Fatal(err)
 		}

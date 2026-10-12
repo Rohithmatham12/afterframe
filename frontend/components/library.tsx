@@ -13,6 +13,7 @@ import {
   progressReasonLabel,
   REGIONS,
   VIEWING_CONTEXTS,
+  visibilityLabel,
 } from '@/lib/vocab';
 import { parseLetterboxdDiary, type DiaryRow } from '@/lib/letterboxd';
 import {
@@ -1285,7 +1286,9 @@ export function Diary({
             </button>
             <p className="muted">
               {e.film.year} {e.rewatch ? '· Rewatch' : ''}{' '}
-              {e.private ? '· Private' : ''}{' '}
+              {e.visibility && e.visibility !== 'public'
+                ? '· ' + visibilityLabel(e.visibility)
+                : ''}{' '}
               {e.context ? '· ' + contextLabel(e.context) : ''}
             </p>
             <Stars rating={e.rating} />

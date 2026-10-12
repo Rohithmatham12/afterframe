@@ -8,6 +8,7 @@ import {
   VIEWING_CONTEXTS,
   REVIEW_TONES,
   CRAFT_CATEGORIES,
+  VISIBILITY_OPTIONS,
 } from '@/lib/vocab';
 type Mutation = Models['Mutation'];
 export function AuthForm({ done }: { done: () => void }) {
@@ -129,7 +130,7 @@ export function LogForm({
     rating: entry?.rating ?? null,
     notes: entry?.notes || '',
     rewatch: entry?.rewatch || false,
-    private: entry?.private || false,
+    visibility: entry?.visibility || 'private',
     request_id: crypto.randomUUID(),
     id: entry?.id,
     scene: '',
@@ -223,15 +224,20 @@ export function LogForm({
           />
           A rewatch
         </label>
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={data.private}
-            onChange={(e) => setData({ ...data, private: e.target.checked })}
-          />
-          Private viewing
-        </label>
       </div>
+      <label>
+        Who can see this
+        <select
+          value={data.visibility}
+          onChange={(e) => setData({ ...data, visibility: e.target.value })}
+        >
+          {VISIBILITY_OPTIONS.map((v) => (
+            <option key={v.value} value={v.value}>
+              {v.label}
+            </option>
+          ))}
+        </select>
+      </label>
       <details>
         <summary>
           Add a private memory <span>optional</span>

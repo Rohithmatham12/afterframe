@@ -85,13 +85,13 @@ INSERT INTO films(id,title,year,poster,backdrop,overview,genres,director,runtime
 SELECT to_jsonb(f.*) FROM films f WHERE id=$1 AND cached_at>now()-interval '1 day';
 
 -- name: AddViewing :one
-INSERT INTO viewings(user_id,film_id,watched_on,rating,notes,rewatch,private,request_id,context) SELECT viewer_id(),(d->>'film_id')::bigint,(d->>'watched_on')::date,(d->>'rating')::numeric,d->>'notes',(d->>'rewatch')::boolean,(d->>'private')::boolean,(d->>'request_id')::uuid,coalesce(d->>'viewing_context','') FROM (SELECT $1::jsonb d) x ON CONFLICT(user_id,request_id) DO NOTHING RETURNING to_jsonb(viewings.*);
+INSERT INTO viewings(user_id,film_id,watched_on,rating,notes,rewatch,visibility,request_id,context) SELECT viewer_id(),(d->>'film_id')::bigint,(d->>'watched_on')::date,(d->>'rating')::numeric,d->>'notes',(d->>'rewatch')::boolean,coalesce(nullif(d->>'visibility',''),'private'),(d->>'request_id')::uuid,coalesce(d->>'viewing_context','') FROM (SELECT $1::jsonb d) x ON CONFLICT(user_id,request_id) DO NOTHING RETURNING to_jsonb(viewings.*);
 
 -- name: ExistingViewing :one
 SELECT to_jsonb(v.*) FROM viewings v WHERE user_id=viewer_id() AND request_id=$1;
 
 -- name: EditViewing :one
-UPDATE viewings SET watched_on=(d->>'watched_on')::date,rating=(d->>'rating')::numeric,notes=d->>'notes',rewatch=(d->>'rewatch')::boolean,private=(d->>'private')::boolean,context=coalesce(d->>'viewing_context','') FROM (SELECT $1::jsonb d) x WHERE id=(d->>'id')::uuid AND user_id=viewer_id() RETURNING to_jsonb(viewings.*);
+UPDATE viewings SET watched_on=(d->>'watched_on')::date,rating=(d->>'rating')::numeric,notes=d->>'notes',rewatch=(d->>'rewatch')::boolean,visibility=coalesce(nullif(d->>'visibility',''),'private'),context=coalesce(d->>'viewing_context','') FROM (SELECT $1::jsonb d) x WHERE id=(d->>'id')::uuid AND user_id=viewer_id() RETURNING to_jsonb(viewings.*);
 
 -- name: DeleteViewing :one
 DELETE FROM viewings WHERE id=$1 AND user_id=viewer_id() RETURNING to_jsonb(viewings.*);
@@ -170,7 +170,7 @@ SELECT coalesce(jsonb_agg(to_jsonb(l.*)||jsonb_build_object('username',p.usernam
 DELETE FROM lists WHERE id=$1 AND user_id=viewer_id() RETURNING to_jsonb(lists.*);
 
 -- name: Profiles :one
-SELECT coalesce(jsonb_agg(item),'[]'::jsonb) FROM (SELECT to_jsonb(p.*)||jsonb_build_object('following',EXISTS(SELECT 1 FROM follows WHERE user_id=viewer_id() AND target_id=p.id),'followers',(SELECT count(*) FROM follows WHERE target_id=p.id),'films',(SELECT count(*) FROM viewings WHERE user_id=p.id AND (NOT private OR p.id=viewer_id()))) item FROM profiles p WHERE profile_visible(p.id) AND (username ILIKE '%'||$1||'%' OR name ILIKE '%'||$1||'%') ORDER BY username LIMIT 50) x;
+SELECT coalesce(jsonb_agg(item),'[]'::jsonb) FROM (SELECT to_jsonb(p.*)||jsonb_build_object('following',EXISTS(SELECT 1 FROM follows WHERE user_id=viewer_id() AND target_id=p.id),'followers',(SELECT count(*) FROM follows WHERE target_id=p.id),'films',(SELECT count(*) FROM viewings WHERE user_id=p.id AND (p.id=viewer_id() OR visibility='public' OR (visibility='followers' AND EXISTS(SELECT 1 FROM follows WHERE user_id=viewer_id() AND target_id=p.id))))) item FROM profiles p WHERE profile_visible(p.id) AND (username ILIKE '%'||$1||'%' OR name ILIKE '%'||$1||'%') ORDER BY username LIMIT 50) x;
 
 -- name: Follow :one
 INSERT INTO follows(user_id,target_id) SELECT viewer_id(),$1 WHERE profile_visible($1) ON CONFLICT DO NOTHING RETURNING to_jsonb(follows.*);
@@ -230,7 +230,7 @@ DELETE FROM list_likes WHERE user_id=viewer_id() AND list_id=$1;
 UPDATE profiles SET avatar=$1 WHERE id=viewer_id();
 
 -- name: ProfileDetails :one
-SELECT to_jsonb(p.*)||jsonb_build_object('followers',(SELECT count(*) FROM follows WHERE target_id=p.id),'following',(SELECT count(*) FROM follows WHERE user_id=p.id),'viewings',(SELECT count(*) FROM viewings WHERE user_id=p.id),'diary',coalesce((SELECT jsonb_agg(to_jsonb(v.*)||jsonb_build_object('film',film_card(f)) ORDER BY v.watched_on DESC) FROM (SELECT * FROM viewings WHERE user_id=p.id AND (NOT private OR p.id=viewer_id()) ORDER BY watched_on DESC,created_at DESC LIMIT 50) v JOIN films f ON f.id=v.film_id),'[]'::jsonb)) FROM profiles p WHERE p.id=$1 AND profile_visible(p.id);
+SELECT to_jsonb(p.*)||jsonb_build_object('followers',(SELECT count(*) FROM follows WHERE target_id=p.id),'following',(SELECT count(*) FROM follows WHERE user_id=p.id),'viewings',(SELECT count(*) FROM viewings WHERE user_id=p.id),'diary',coalesce((SELECT jsonb_agg(to_jsonb(v.*)||jsonb_build_object('film',film_card(f)) ORDER BY v.watched_on DESC) FROM (SELECT * FROM viewings WHERE user_id=p.id AND (p.id=viewer_id() OR visibility='public' OR (visibility='followers' AND EXISTS(SELECT 1 FROM follows WHERE user_id=viewer_id() AND target_id=p.id))) ORDER BY watched_on DESC,created_at DESC LIMIT 50) v JOIN films f ON f.id=v.film_id),'[]'::jsonb)) FROM profiles p WHERE p.id=$1 AND profile_visible(p.id);
 
 -- name: Network :one
 SELECT coalesce(jsonb_agg(to_jsonb(p.*)),'[]'::jsonb) FROM profiles p WHERE p.id IN (SELECT CASE WHEN $2::boolean THEN user_id ELSE target_id END FROM follows WHERE CASE WHEN $2 THEN target_id=$1 ELSE user_id=$1 END);

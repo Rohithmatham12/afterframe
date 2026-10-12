@@ -984,7 +984,7 @@ export interface components {
             rating: number | null;
             notes: string;
             rewatch: boolean;
-            private: boolean;
+            visibility: string;
             request_id: string;
             created_at: string;
             film: components["schemas"]["Film"];
@@ -1150,6 +1150,7 @@ export interface components {
             category?: string;
             family_policy?: string;
             family_region?: string;
+            visibility?: string;
             film_id?: number;
             rating?: number | null;
             layer?: number;

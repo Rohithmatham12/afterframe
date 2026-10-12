@@ -23,6 +23,7 @@ sql:
       - migrations/000019_theatrical_plans.up.sql
       - migrations/000020_tribes.up.sql
       - migrations/000021_tmdb_votes_reviews.up.sql
+      - migrations/000022_entry_visibility.up.sql
     gen:
       go:
         package: db
